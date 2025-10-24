@@ -3,6 +3,7 @@
 import { useEffect, useRef, ReactNode, useState } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useHapticFeedback } from '../hooks/useHapticFeedback';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -31,12 +32,45 @@ export default function MasterScrollContainer({ children }: MasterScrollContaine
   const [currentProgress, setCurrentProgress] = useState(0);
   const rafIdRef = useRef<number | null>(null);
   const pendingProgressRef = useRef<number | null>(null);
+  const lastSceneIndexRef = useRef<number | null>(null);
+  const { triggerHaptic } = useHapticFeedback();
 
   useEffect(() => {
     if (process.env.NODE_ENV !== 'production') {
       (window as typeof window & { __MASTER_PROGRESS?: number }).__MASTER_PROGRESS = currentProgress;
     }
   }, [currentProgress]);
+
+  useEffect(() => {
+    const sceneOrder: Array<keyof typeof SCENE_TIMING> = [
+      'hero',
+      'textMorph',
+      'infoSections',
+      'ship',
+      'globe',
+      'forest',
+    ];
+
+    const activeSceneIndex = sceneOrder.findIndex((key) => {
+      const scene = SCENE_TIMING[key];
+      return currentProgress >= scene.start && currentProgress < scene.end;
+    });
+
+    if (activeSceneIndex === -1) {
+      return;
+    }
+
+    if (lastSceneIndexRef.current === null) {
+      lastSceneIndexRef.current = activeSceneIndex;
+      return;
+    }
+
+    if (activeSceneIndex !== lastSceneIndexRef.current) {
+      const direction = activeSceneIndex > lastSceneIndexRef.current ? 'forward' : 'backward';
+      triggerHaptic(direction === 'forward' ? 'light' : 'medium');
+      lastSceneIndexRef.current = activeSceneIndex;
+    }
+  }, [currentProgress, triggerHaptic]);
 
   useEffect(() => {
     if (!containerRef.current) return;

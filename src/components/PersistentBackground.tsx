@@ -96,6 +96,142 @@ const TONE_CONFIG: Record<PersistentBackgroundProps["tone"], ToneConfig> = {
 
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 
+type SnowParticleState = {
+  velocity: THREE.Vector3;
+  initialOffset: number;
+};
+
+type HeroCameraKeyframe = {
+  progress: number;
+  position: THREE.Vector3;
+  lookAt: THREE.Vector3;
+  fov: number;
+};
+
+const HERO_CAMERA_KEYFRAMES: HeroCameraKeyframe[] = [
+  {
+    progress: 0,
+    position: new THREE.Vector3(0, 16, 96),
+    lookAt: new THREE.Vector3(0, 8, -38),
+    fov: 46,
+  },
+  {
+    progress: 0.25,
+    position: new THREE.Vector3(12, 20, 74),
+    lookAt: new THREE.Vector3(-3, 12, -28),
+    fov: 44,
+  },
+  {
+    progress: 0.5,
+    position: new THREE.Vector3(-18, 24, 62),
+    lookAt: new THREE.Vector3(2, 20, -26),
+    fov: 42,
+  },
+  {
+    progress: 0.75,
+    position: new THREE.Vector3(6, 14, 52),
+    lookAt: new THREE.Vector3(-1, 26, -18),
+    fov: 45,
+  },
+  {
+    progress: 1,
+    position: new THREE.Vector3(0, 12, 58),
+    lookAt: new THREE.Vector3(0, 10, -8),
+    fov: 43,
+  },
+];
+
+const sampleHeroCamera = (progress: number): HeroCameraKeyframe => {
+  if (progress <= HERO_CAMERA_KEYFRAMES[0].progress) {
+    return HERO_CAMERA_KEYFRAMES[0];
+  }
+  if (progress >= HERO_CAMERA_KEYFRAMES[HERO_CAMERA_KEYFRAMES.length - 1].progress) {
+    return HERO_CAMERA_KEYFRAMES[HERO_CAMERA_KEYFRAMES.length - 1];
+  }
+
+  for (let i = 0; i < HERO_CAMERA_KEYFRAMES.length - 1; i += 1) {
+    const current = HERO_CAMERA_KEYFRAMES[i];
+    const next = HERO_CAMERA_KEYFRAMES[i + 1];
+    if (progress >= current.progress && progress <= next.progress) {
+      const range = next.progress - current.progress;
+      const localProgress = range > 0 ? (progress - current.progress) / range : 0;
+      const eased = localProgress < 0.5
+        ? 2 * localProgress * localProgress
+        : 1 - Math.pow(-2 * localProgress + 2, 2) / 2;
+      const position = current.position.clone().lerp(next.position, eased);
+      const lookAt = current.lookAt.clone().lerp(next.lookAt, eased);
+      const fov = THREE.MathUtils.lerp(current.fov, next.fov, eased);
+      return {
+        progress,
+        position,
+        lookAt,
+        fov,
+      };
+    }
+  }
+
+  return HERO_CAMERA_KEYFRAMES[HERO_CAMERA_KEYFRAMES.length - 1];
+};
+
+type CloudLayerConfig = {
+  texture: string;
+  position: THREE.Vector3;
+  scale: THREE.Vector2;
+  horizontalAmplitude: number;
+  verticalAmplitude: number;
+  speed: number;
+  phase: number;
+  parallaxFactor: number;
+  baseOpacity: number;
+};
+
+const CLOUD_LAYER_CONFIG: CloudLayerConfig[] = [
+  {
+    texture: "/assets/clouds/35.png",
+    position: new THREE.Vector3(-52, 24, -54),
+    scale: new THREE.Vector2(220, 132),
+    horizontalAmplitude: 8,
+    verticalAmplitude: 2.4,
+    speed: 0.065,
+    phase: 0.0,
+    parallaxFactor: 0.12,
+    baseOpacity: 0.18,
+  },
+  {
+    texture: "/assets/clouds/62.png",
+    position: new THREE.Vector3(-8, 26, -48),
+    scale: new THREE.Vector2(200, 118),
+    horizontalAmplitude: 7.5,
+    verticalAmplitude: 2.0,
+    speed: 0.082,
+    phase: 1.2,
+    parallaxFactor: 0.14,
+    baseOpacity: 0.21,
+  },
+  {
+    texture: "/assets/clouds/71.png",
+    position: new THREE.Vector3(34, 28, -46),
+    scale: new THREE.Vector2(210, 124),
+    horizontalAmplitude: 6.8,
+    verticalAmplitude: 1.8,
+    speed: 0.095,
+    phase: 2.4,
+    parallaxFactor: 0.16,
+    baseOpacity: 0.19,
+  },
+  {
+    texture: "/assets/clouds/76.png",
+    position: new THREE.Vector3(-2, 32, -60),
+    scale: new THREE.Vector2(260, 150),
+    horizontalAmplitude: 10.5,
+    verticalAmplitude: 3.2,
+    speed: 0.07,
+    phase: 3.6,
+    parallaxFactor: 0.18,
+    baseOpacity: 0.16,
+  },
+];
+
 interface CloudBillboard {
   sprite: THREE.Sprite;
   basePosition: THREE.Vector3;
@@ -103,6 +239,8 @@ interface CloudBillboard {
   verticalOffset: number;
   speed: number;
   phase: number;
+  parallaxFactor: number;
+  baseOpacity: number;
 }
 
 export default function PersistentBackground({
@@ -119,13 +257,17 @@ export default function PersistentBackground({
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const clockRef = useRef(new THREE.Clock());
 
-  const mountainMaterialRef = useRef<THREE.MeshStandardMaterial[]>([]);
-  const mountainFallbackRef = useRef<THREE.Group | null>(null);
-  const cloudGroupRef = useRef<THREE.Group | null>(null);
+const mountainMaterialRef = useRef<THREE.MeshStandardMaterial[]>([]);
+const mountainFallbackRef = useRef<THREE.Group | null>(null);
+const cloudGroupRef = useRef<THREE.Group | null>(null);
 const cloudBillboardsRef = useRef<CloudBillboard[]>([]);
 const cloudTimeRef = useRef(0);
+const snowTimeRef = useRef(0);
 const mistMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
 const waterMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
+const snowPointsRef = useRef<THREE.Points | null>(null);
+const snowStatesRef = useRef<SnowParticleState[]>([]);
+const snowBoundsRef = useRef({ width: 180, height: 120, depth: 140 });
 const shipMaterialRef = useRef<THREE.MeshStandardMaterial | null>(null);
 const globeMaterialRef = useRef<THREE.MeshStandardMaterial | null>(null);
 const forestMaterialRef = useRef<THREE.MeshStandardMaterial | null>(null);
@@ -144,6 +286,7 @@ const overlayRef = useRef<HTMLDivElement | null>(null);
   const targetsRef = useRef({
     cameraPosition: new THREE.Vector3(0, 12, 72),
     cameraLookAt: new THREE.Vector3(0, 8, 0),
+    cameraFov: 45,
     mountainRotation: 0,
     mountainOpacity: 1,
     mountainBlend: 0,
@@ -153,11 +296,13 @@ const overlayRef = useRef<HTMLDivElement | null>(null);
     shipProgress: 0,
     globeOpacity: 0,
     forestOpacity: 0,
+    heroProgress: 0,
   });
 
   const stateRef = useRef({
     cameraPosition: new THREE.Vector3(0, 12, 72),
     cameraLookAt: new THREE.Vector3(0, 8, 0),
+    cameraFov: 45,
     mountainRotation: 0,
     mountainOpacity: 1,
     mountainBlend: 0,
@@ -167,6 +312,7 @@ const overlayRef = useRef<HTMLDivElement | null>(null);
     shipProgress: 0,
     globeOpacity: 0,
     forestOpacity: 0,
+    heroProgress: 0,
   });
 
   const shaders = useMemo(() => {
@@ -638,17 +784,56 @@ const overlayRef = useRef<HTMLDivElement | null>(null);
     scene.add(waterMesh);
     waterMaterialRef.current = waterMaterial;
 
+    // Snow particle volume
+    const particleCount = 2000;
+    const snowGeometry = new THREE.BufferGeometry();
+    const snowPositions = new Float32Array(particleCount * 3);
+    const snowSizes = new Float32Array(particleCount);
+    const snowStates: SnowParticleState[] = [];
+
+    const snowBounds = snowBoundsRef.current;
+
+    for (let i = 0; i < particleCount; i += 1) {
+      const i3 = i * 3;
+      snowPositions[i3] = (Math.random() - 0.5) * snowBounds.width;
+      snowPositions[i3 + 1] = Math.random() * snowBounds.height * 0.8 + 12;
+      snowPositions[i3 + 2] = (Math.random() - 0.5) * snowBounds.depth;
+      snowSizes[i] = 0.6 + Math.random() * 1.4;
+      snowStates.push({
+        velocity: new THREE.Vector3(
+          (Math.random() - 0.5) * 0.12,
+          -0.25 - Math.random() * 0.35,
+          (Math.random() - 0.5) * 0.12
+        ),
+        initialOffset: Math.random() * Math.PI * 2,
+      });
+    }
+
+    snowGeometry.setAttribute("position", new THREE.Float32BufferAttribute(snowPositions, 3));
+    snowGeometry.setAttribute("size", new THREE.Float32BufferAttribute(snowSizes, 1));
+
+    const snowMaterial = new THREE.PointsMaterial({
+      color: new THREE.Color(0xffffff),
+      size: 0.65,
+      transparent: true,
+      opacity: 0.0,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      sizeAttenuation: true,
+    });
+
+    const snowPoints = new THREE.Points(snowGeometry, snowMaterial);
+    snowPoints.position.set(0, 0, -24);
+    snowPoints.renderOrder = 4;
+    scene.add(snowPoints);
+
+    snowPointsRef.current = snowPoints;
+    snowStatesRef.current = snowStates;
+
     const cloudGroup = new THREE.Group();
     cloudGroup.position.set(0, 18, -48);
     cloudGroupRef.current = cloudGroup;
     scene.add(cloudGroup);
-
-    const cloudTexturePaths = [
-      "/assets/clouds/35.png",
-      "/assets/clouds/62.png",
-      "/assets/clouds/71.png",
-      "/assets/clouds/76.png",
-    ];
 
     const loadCloudTexture = (path: string) =>
       new Promise<THREE.Texture>((resolve, reject) => {
@@ -664,34 +849,35 @@ const overlayRef = useRef<HTMLDivElement | null>(null);
         );
       });
 
-    Promise.all(cloudTexturePaths.map((path) => loadCloudTexture(path)))
+    Promise.all(CLOUD_LAYER_CONFIG.map((layer) => loadCloudTexture(layer.texture)))
       .then((textures) => {
         if (disposed) return;
-        const spriteMaterialParams = textures.map((texture) => ({ texture }));
-        spriteMaterialParams.forEach(({ texture }, index) => {
+        textures.forEach((texture, index) => {
+          const layer = CLOUD_LAYER_CONFIG[index];
           const material = new THREE.SpriteMaterial({
             map: texture,
             transparent: true,
-            opacity: 0.32,
+            opacity: 0.18,
             depthWrite: false,
+            depthTest: false,
+            color: new THREE.Color(0xc7d8ff),
+            blending: THREE.AdditiveBlending,
           });
           const sprite = new THREE.Sprite(material);
-          const scale = 160 + index * 35;
-          sprite.scale.set(scale, scale * 0.62, 1);
-          const basePosition = new THREE.Vector3(
-            (index - 1.5) * 38,
-            18 + index * 4,
-            -40 - index * 6
-          );
+          sprite.scale.set(layer.scale.x, layer.scale.y, 1);
+          const basePosition = layer.position.clone();
           sprite.position.copy(basePosition);
+          sprite.renderOrder = 2 + index;
           cloudGroup.add(sprite);
           cloudBillboardsRef.current.push({
             sprite,
             basePosition,
-            horizontalAmplitude: 8 + index * 3,
-            verticalOffset: 2 + index * 1.2,
-            speed: 0.12 + index * 0.03,
-            phase: index * 1.7,
+            horizontalAmplitude: layer.horizontalAmplitude,
+            verticalOffset: layer.verticalAmplitude,
+            speed: layer.speed,
+            phase: layer.phase,
+            parallaxFactor: layer.parallaxFactor,
+            baseOpacity: layer.baseOpacity,
           });
         });
       })
@@ -769,6 +955,7 @@ const overlayRef = useRef<HTMLDivElement | null>(null);
 
       state.cameraPosition.lerp(targets.cameraPosition, 0.065);
       state.cameraLookAt.lerp(targets.cameraLookAt, 0.065);
+      state.cameraFov = THREE.MathUtils.lerp(state.cameraFov, targets.cameraFov, 0.08);
       state.mountainRotation = THREE.MathUtils.lerp(state.mountainRotation, targets.mountainRotation, 0.06);
       state.mountainOpacity = THREE.MathUtils.lerp(state.mountainOpacity, targets.mountainOpacity, 0.08);
       state.mountainBlend = THREE.MathUtils.lerp(state.mountainBlend, targets.mountainBlend, 0.08);
@@ -778,11 +965,16 @@ const overlayRef = useRef<HTMLDivElement | null>(null);
       state.shipProgress = THREE.MathUtils.lerp(state.shipProgress, targets.shipProgress, 0.08);
       state.globeOpacity = THREE.MathUtils.lerp(state.globeOpacity, targets.globeOpacity, 0.08);
       state.forestOpacity = THREE.MathUtils.lerp(state.forestOpacity, targets.forestOpacity, 0.08);
+      state.heroProgress = THREE.MathUtils.lerp(state.heroProgress, targets.heroProgress, 0.12);
 
       if (cameraRef.current) {
         const camera = cameraRef.current;
         camera.position.copy(state.cameraPosition);
         camera.lookAt(state.cameraLookAt);
+        if (Math.abs(camera.fov - state.cameraFov) > 0.05) {
+          camera.fov = state.cameraFov;
+          camera.updateProjectionMatrix();
+        }
       }
 
       if (mountainGroupRef.current) {
@@ -834,15 +1026,57 @@ const overlayRef = useRef<HTMLDivElement | null>(null);
 
       if (cloudBillboardsRef.current.length && cloudGroupRef.current) {
         cloudTimeRef.current += delta;
-        const cloudVisibility = Math.max(state.mistOpacity, 0.08);
-        cloudBillboardsRef.current.forEach((cloud, index) => {
+        const visibility = Math.max(state.mistOpacity, 0.1) * state.mountainOpacity;
+        const cinematicBoost = THREE.MathUtils.smoothstep(state.heroProgress, 0, 1);
+        cloudBillboardsRef.current.forEach((cloud) => {
           const t = cloudTimeRef.current * cloud.speed + cloud.phase;
-          cloud.sprite.position.x = cloud.basePosition.x + Math.sin(t) * cloud.horizontalAmplitude;
-          cloud.sprite.position.y = cloud.basePosition.y + Math.cos(t * 0.6) * cloud.verticalOffset;
+          const horizontalDrift = Math.sin(t) * cloud.horizontalAmplitude * (1 + cinematicBoost * 0.65);
+          const verticalDrift = Math.cos(t * 0.6) * cloud.verticalOffset;
+          cloud.sprite.position.x = cloud.basePosition.x + horizontalDrift;
+          cloud.sprite.position.y = cloud.basePosition.y + verticalDrift;
+          cloud.sprite.position.z = cloud.basePosition.z - cinematicBoost * cloud.parallaxFactor * 18;
           const material = cloud.sprite.material as THREE.SpriteMaterial;
-          material.opacity = 0.18 + cloudVisibility * 0.45;
+          const targetOpacity = (cloud.baseOpacity + visibility * 0.5) * (0.6 + cinematicBoost * 0.55);
+          const clampedOpacity = Math.max(0.05, Math.min(0.42, targetOpacity));
+          material.opacity = THREE.MathUtils.lerp(material.opacity, clampedOpacity, 0.12);
+          material.rotation += delta * 0.05;
         });
         cloudGroupRef.current.visible = state.mountainOpacity > 0.02;
+      }
+
+      if (snowPointsRef.current) {
+        const snowPoints = snowPointsRef.current;
+        const positions = snowPoints.geometry.getAttribute("position") as THREE.BufferAttribute;
+        const data = positions.array as Float32Array;
+        const states = snowStatesRef.current;
+        const bounds = snowBoundsRef.current;
+        const windStrength = 0.35 * (0.5 + 0.5 * state.heroProgress);
+        snowTimeRef.current += delta;
+        const wind = Math.sin(snowTimeRef.current * 0.18) * windStrength;
+
+        for (let i = 0; i < states.length; i += 1) {
+          const i3 = i * 3;
+          data[i3] += (states[i].velocity.x + wind * 0.02) * (1 + state.heroProgress * 0.6);
+          data[i3 + 1] += states[i].velocity.y;
+          data[i3 + 2] += (states[i].velocity.z + wind * 0.01);
+
+          if (data[i3 + 1] < -6) {
+            data[i3] = (Math.random() - 0.5) * bounds.width;
+            data[i3 + 1] = Math.random() * bounds.height * 0.8 + 20;
+            data[i3 + 2] = (Math.random() - 0.5) * bounds.depth;
+          }
+
+          if (data[i3] > bounds.width * 0.5) data[i3] = -bounds.width * 0.5;
+          if (data[i3] < -bounds.width * 0.5) data[i3] = bounds.width * 0.5;
+          if (data[i3 + 2] > bounds.depth * 0.5) data[i3 + 2] = -bounds.depth * 0.5;
+          if (data[i3 + 2] < -bounds.depth * 0.5) data[i3 + 2] = bounds.depth * 0.5;
+        }
+        positions.needsUpdate = true;
+
+        const snowMaterial = snowPoints.material as THREE.PointsMaterial;
+        const visibility = THREE.MathUtils.clamp(state.heroProgress * 1.2, 0, 1);
+        snowMaterial.opacity = THREE.MathUtils.lerp(snowMaterial.opacity, visibility * 0.55, 0.08);
+        snowPoints.visible = state.mountainOpacity > 0.05;
       }
 
       if (shipGroupRef.current && shipMaterialRef.current) {
@@ -903,6 +1137,15 @@ const overlayRef = useRef<HTMLDivElement | null>(null);
         sceneRef.current.remove(cloudGroupRef.current);
       }
       cloudGroupRef.current = null;
+      if (snowPointsRef.current && sceneRef.current) {
+        sceneRef.current.remove(snowPointsRef.current);
+        snowPointsRef.current.geometry.dispose();
+        if (snowPointsRef.current.material instanceof THREE.Material) {
+          snowPointsRef.current.material.dispose();
+        }
+      }
+      snowPointsRef.current = null;
+      snowStatesRef.current = [];
       if (rendererRef.current) {
         rendererRef.current.dispose();
         if (rendererRef.current.domElement.parentElement) {
@@ -968,7 +1211,8 @@ const overlayRef = useRef<HTMLDivElement | null>(null);
   }, [tone]);
 
   useEffect(() => {
-    const heroProgress = getSceneProgress(progress, SCENE_TIMING.hero.start, SCENE_TIMING.hero.end) ?? 0;
+    const heroRange = SCENE_TIMING.hero;
+    const heroProgress = clamp01((progress - heroRange.start) / heroRange.duration);
     const morphProgress = getSceneProgress(progress, SCENE_TIMING.textMorph.start, SCENE_TIMING.textMorph.end) ?? 0;
     const infoProgress = getSceneProgress(progress, SCENE_TIMING.infoSections.start, SCENE_TIMING.infoSections.end) ?? 0;
     const shipSceneProgress =
@@ -980,51 +1224,46 @@ const overlayRef = useRef<HTMLDivElement | null>(null);
 
     const targets = targetsRef.current;
 
-    const cameraBase = new THREE.Vector3(0, 12, 72);
-    const cameraHero = new THREE.Vector3(0, 10, 58);
-    const cameraMorph = new THREE.Vector3(6, 9, 54);
-    const cameraInfo = new THREE.Vector3(10, 11, 62);
-    const cameraShip = new THREE.Vector3(2, 14, 70);
-    const cameraGlobe = new THREE.Vector3(0, 8, 56);
-    const cameraForest = new THREE.Vector3(0, 14, 68);
 
-    const lookBase = new THREE.Vector3(0, 6, -12);
-    const lookMorph = new THREE.Vector3(4, 4, -18);
-    const lookInfo = new THREE.Vector3(2, 6, -30);
-    const lookShip = new THREE.Vector3(0, 2, -10);
-    const lookGlobe = new THREE.Vector3(0, 6, -36);
-    const lookForest = new THREE.Vector3(0, 12, -40);
+    const heroState = sampleHeroCamera(heroProgress);
+    const heroCameraPosition = heroState.position.clone();
+    const heroLookTarget = heroState.lookAt.clone();
 
-    // ✨ CINEMATIC CAMERA ORBIT - 30° rotation during hero zoom
-    // Rotates camera around mountain while maintaining distance for dramatic reveal
-    const heroCamera = cameraBase.clone().lerp(cameraHero, heroProgress);
-    
-    if (heroProgress > 0.01) {
-      // Apply orbital rotation (30° total = ~0.524 radians)
-      const orbitAngle = heroProgress * THREE.MathUtils.degToRad(30);
-      const radius = Math.sqrt(heroCamera.x * heroCamera.x + heroCamera.z * heroCamera.z);
-      const baseAngle = Math.atan2(heroCamera.x, heroCamera.z);
-      
-      heroCamera.x = radius * Math.sin(baseAngle + orbitAngle);
-      heroCamera.z = radius * Math.cos(baseAngle + orbitAngle);
-      
-      // Subtle upward tilt for more dramatic perspective (15° total)
-      heroCamera.y += heroProgress * 3.0;
-    }
-    const morphCamera = cameraHero.clone().lerp(cameraMorph, morphProgress);
-    const infoCamera = morphCamera.clone().lerp(cameraInfo, infoProgress);
-    const shipCamera = infoCamera.clone().lerp(cameraShip, shipSceneProgress);
-    const globeCamera = shipCamera.clone().lerp(cameraGlobe, globeSceneProgress);
-    const forestCamera = globeCamera.clone().lerp(cameraForest, forestSceneProgress);
+    const cameraMorphTarget = new THREE.Vector3(6, 9, 54);
+    const cameraInfoTarget = new THREE.Vector3(10, 11, 62);
+    const cameraShipTarget = new THREE.Vector3(2, 14, 70);
+    const cameraGlobeTarget = new THREE.Vector3(0, 8, 56);
+    const cameraForestTarget = new THREE.Vector3(0, 14, 68);
+
+    const lookMorphTarget = new THREE.Vector3(4, 4, -18);
+    const lookInfoTarget = new THREE.Vector3(2, 6, -30);
+    const lookShipTarget = new THREE.Vector3(0, 2, -10);
+    const lookGlobeTarget = new THREE.Vector3(0, 6, -36);
+    const lookForestTarget = new THREE.Vector3(0, 12, -40);
+
+    const morphCamera = heroCameraPosition.clone().lerp(cameraMorphTarget, morphProgress);
+    const infoCamera = morphCamera.clone().lerp(cameraInfoTarget, infoProgress);
+    const shipCamera = infoCamera.clone().lerp(cameraShipTarget, shipSceneProgress);
+    const globeCamera = shipCamera.clone().lerp(cameraGlobeTarget, globeSceneProgress);
+    const forestCamera = globeCamera.clone().lerp(cameraForestTarget, forestSceneProgress);
 
     targets.cameraPosition.copy(forestCamera);
 
-    const heroLook = lookBase.clone().lerp(lookMorph, morphProgress);
-    const infoLook = heroLook.clone().lerp(lookInfo, infoProgress);
-    const shipLook = infoLook.clone().lerp(lookShip, shipSceneProgress);
-    const globeLook = shipLook.clone().lerp(lookGlobe, globeSceneProgress);
-    const forestLook = globeLook.clone().lerp(lookForest, forestSceneProgress);
+    const morphLook = heroLookTarget.clone().lerp(lookMorphTarget, morphProgress);
+    const infoLook = morphLook.clone().lerp(lookInfoTarget, infoProgress);
+    const shipLook = infoLook.clone().lerp(lookShipTarget, shipSceneProgress);
+    const globeLook = shipLook.clone().lerp(lookGlobeTarget, globeSceneProgress);
+    const forestLook = globeLook.clone().lerp(lookForestTarget, forestSceneProgress);
     targets.cameraLookAt.copy(forestLook);
+
+    const heroFov = heroState.fov;
+    const morphFov = THREE.MathUtils.lerp(heroFov, 47, morphProgress);
+    const infoFov = THREE.MathUtils.lerp(morphFov, 49, infoProgress);
+    const shipFov = THREE.MathUtils.lerp(infoFov, 46, shipSceneProgress);
+    const globeFov = THREE.MathUtils.lerp(shipFov, 44, globeSceneProgress);
+    const forestFov = THREE.MathUtils.lerp(globeFov, 43, forestSceneProgress);
+    targets.cameraFov = forestFov;
+    targets.heroProgress = heroProgress;
 
     const mountainRotation =
       -Math.PI / 12 +
