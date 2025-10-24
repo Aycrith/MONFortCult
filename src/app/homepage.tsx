@@ -10,6 +10,7 @@ import PersistentBackground from '@/components/PersistentBackground';
 import SnowOverlay from '@/components/SnowOverlay';
 import TextMorphScene from '@/components/scenes/TextMorphScene';
 import ShipScene from '@/components/scenes/ShipScene';
+import GlobeScene from '@/components/scenes/GlobeScene';
 import { useMenu } from '@/context/MenuContext';
 import MenuPanel, { type SceneTone } from '@/components/MenuPanel';
 import HeroOverlay from '@/components/overlays/HeroOverlay';
@@ -150,19 +151,31 @@ export default function Homepage() {
 
               <AtmosphereOverlay progress={globalProgress} />
 
-              {/* ✨ Multi-Layer Cloud System - Scene 1 atmospheric depth */}
-              {heroProgress !== null && (
+              {/* ✨ DISABLED: Cloud system causing dark blobs - using minimal atmosphere instead */}
+              {/* {heroProgress !== null && (
                 <div className="absolute inset-0" style={{ zIndex: 2 }}>
-                  <CloudOverlay 
-                    scrollProgress={heroProgress} 
+                  <CloudOverlay
+                    scrollProgress={heroProgress}
                     cloudCount={5}
                     cloudsPath="/assets/clouds"
                   />
                 </div>
-              )}
+              )} */}
 
               {shipProgress !== null && (
-                <ShipScene progress={shipProgress} opacity={shipOpacity} isVisible={shipProgress !== null} />
+                <ShipScene
+                  progress={shipProgress}
+                  opacity={shipOpacity}
+                  isVisible={shipProgress !== null}
+                />
+              )}
+
+              {globeProgress !== null && (
+                <GlobeScene
+                  progress={globeProgress}
+                  opacity={globeOpacity}
+                  isVisible={globeProgress !== null}
+                />
               )}
 
               <SnowOverlay active={snowEnabled} />

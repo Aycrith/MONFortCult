@@ -2,380 +2,184 @@
 
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { gsap } from 'gsap';
-
-/**
- * GlobeScene (Scene 5) - NOW A CANVAS LAYER
- *
- * Earth from space view focused on Europe/Middle East region.
- * Features:
- * - Rotating Three.js sphere with Earth texture
- * - Semi-transparent cloud layer
- * - Glowing dots for trade hubs (Geneva, Dubai, Singapore)
- * - Location labels with fade-in animation
- *
- * ARCHITECTURAL NOTE:
- * This component NO LONGER creates its own ScrollTrigger with pin: true.
- * It receives progress from MasterScrollContainer and updates accordingly.
- */
-
-interface TradeHub {
-  name: string;
-  lat: number;
-  lon: number;
-  x: number;
-  y: number;
-}
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 
 interface GlobeSceneProps {
-  progress: number; // Scene-local progress (0-1)
-  opacity: number; // Scene opacity for crossfading (0-1)
-  isVisible: boolean; // Whether scene is currently visible
+  progress: number;
+  opacity: number;
+  isVisible: boolean;
 }
+
+const MODEL_PATH = '/assets/globe/earthquakes_-_2000_to_2019.glb';
 
 export default function GlobeScene({ progress, opacity, isVisible }: GlobeSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const globeRef = useRef<THREE.Mesh | null>(null);
-  const cloudsRef = useRef<THREE.Mesh | null>(null);
+  const pivotRef = useRef<THREE.Group | null>(null);
   const frameIdRef = useRef<number | null>(null);
-  const markerMeshesRef = useRef<THREE.Mesh[]>([]);
-
-  const [markersVisible, setMarkersVisible] = useState(false);
-
-  // Trade hub locations (latitude, longitude)
-  const tradeHubs: TradeHub[] = [
-    { name: 'SWITZERLAND', lat: 46.2044, lon: 6.1432, x: 0, y: 0 }, // Geneva
-    { name: 'DUBAI', lat: 25.2048, lon: 55.2708, x: 0, y: 0 }, // Dubai
-    { name: 'SINGAPORE', lat: 1.3521, lon: 103.8198, x: 0, y: 0 }, // Singapore
-  ];
-
-  // Convert lat/lon to 3D coordinates on sphere surface
-  const latLonToVector3 = (lat: number, lon: number, radius: number): THREE.Vector3 => {
-    const phi = (90 - lat) * (Math.PI / 180); // Latitude to phi (radians)
-    const theta = (lon + 180) * (Math.PI / 180); // Longitude to theta (radians)
-
-    const x = -(radius * Math.sin(phi) * Math.cos(theta));
-    const y = radius * Math.cos(phi);
-    const z = radius * Math.sin(phi) * Math.sin(theta);
-
-    return new THREE.Vector3(x, y, z);
-  };
+  const clockRef = useRef(new THREE.Clock());
+  const mixerRef = useRef<THREE.AnimationMixer | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    if (!canvasRef.current || !containerRef.current) return;
+    if (!canvasRef.current) return;
 
-    // Scene setup
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x000814); // Deep space blue
+    scene.background = new THREE.Color(0x050910);
     sceneRef.current = scene;
 
-    // Camera setup
-    const camera = new THREE.PerspectiveCamera(
-      45,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      1000
-    );
-    camera.position.set(0, 0, 3);
+    const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 50);
+    camera.position.set(0, 0.4, 6.5);
     cameraRef.current = camera;
 
-    // Detect mobile for performance optimizations
-    const isMobile = window.innerWidth < 768;
-
-    // Renderer setup with performance optimizations
     const renderer = new THREE.WebGLRenderer({
       canvas: canvasRef.current,
-      antialias: !isMobile, // Disable antialiasing on mobile
-      alpha: false,
-      powerPreference: 'high-performance',
-      stencil: false,
-      depth: true,
+      antialias: true,
+      alpha: true,
     });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.6));
     renderer.setSize(window.innerWidth, window.innerHeight);
-    // Reduce pixel ratio on mobile for better performance
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.8;
     rendererRef.current = renderer;
 
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-    scene.add(ambientLight);
+    scene.add(new THREE.AmbientLight(0x0d1724, 0.6));
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(5, 3, 5);
-    scene.add(directionalLight);
+    const keyLight = new THREE.DirectionalLight(0xbfd8ff, 1.1);
+    keyLight.position.set(4, 6, 5);
+    scene.add(keyLight);
 
-    // Create Earth sphere
-    const globeGeometry = new THREE.SphereGeometry(1, 64, 64);
+    const rimLight = new THREE.DirectionalLight(0x4a7cff, 0.8);
+    rimLight.position.set(-3.5, 2.5, -3);
+    scene.add(rimLight);
 
-    // Earth texture using local high-quality world map
-    const textureLoader = new THREE.TextureLoader();
-    const earthMaterial = new THREE.MeshPhongMaterial({
-      map: null,
-      emissive: 0x0a0a0a,
-      emissiveIntensity: 0.1,
-      shininess: 15,
-      specular: 0x333333,
-    });
+    const pivot = new THREE.Group();
+    scene.add(pivot);
+    pivotRef.current = pivot;
 
-    // Load Earth texture (local high-quality world map)
-    textureLoader.load(
-      '/assets/globe/earth-texture.png',
-      (texture) => {
-        earthMaterial.map = texture;
-        earthMaterial.needsUpdate = true;
-      },
-      undefined,
-      (error) => {
-        console.warn('Earth texture loading failed, using fallback:', error);
-        // Fallback to upscaled static image
-        textureLoader.load(
-          '/assets/globe/fallback-upscaled.png',
-          (fallbackTexture) => {
-            earthMaterial.map = fallbackTexture;
-            earthMaterial.needsUpdate = true;
-          },
-          undefined,
-          () => {
-            // Final fallback to color
-            earthMaterial.color = new THREE.Color(0x2244aa);
-            earthMaterial.emissive = new THREE.Color(0x1a3a2a);
-          }
-        );
-      }
-    );
+    const loader = new GLTFLoader();
+    if ('setMeshoptDecoder' in loader && typeof (loader as unknown as { setMeshoptDecoder: (decoder: typeof MeshoptDecoder) => void }).setMeshoptDecoder === 'function') {
+      (loader as unknown as { setMeshoptDecoder: (decoder: typeof MeshoptDecoder) => void }).setMeshoptDecoder(MeshoptDecoder);
+    } else if ('setMeshoptDecoder' in GLTFLoader && typeof (GLTFLoader as unknown as { setMeshoptDecoder: (decoder: typeof MeshoptDecoder) => void }).setMeshoptDecoder === 'function') {
+      (GLTFLoader as unknown as { setMeshoptDecoder: (decoder: typeof MeshoptDecoder) => void }).setMeshoptDecoder(MeshoptDecoder);
+    }
 
-    const globe = new THREE.Mesh(globeGeometry, earthMaterial);
-    globe.rotation.y = -Math.PI / 6; // Rotate to show Europe/Middle East
-    scene.add(globe);
-    globeRef.current = globe;
-
-    // Create cloud layer
-    const cloudGeometry = new THREE.SphereGeometry(1.01, 64, 64);
-    const cloudMaterial = new THREE.MeshPhongMaterial({
-      map: null,
-      transparent: true,
-      opacity: 0.15,
-      depthWrite: false,
-      color: 0xffffff,
-    });
-
-    // Load semi-transparent cloud texture (local)
-    textureLoader.load(
-      '/assets/globe/clouds-texture.png',
-      (texture) => {
-        cloudMaterial.alphaMap = texture;
-        cloudMaterial.needsUpdate = true;
-      },
-      undefined,
-      (error) => {
-        console.warn('Cloud texture loading failed:', error);
-      }
-    );
-
-    const clouds = new THREE.Mesh(cloudGeometry, cloudMaterial);
-    scene.add(clouds);
-    cloudsRef.current = clouds;
-
-    // Create 3D markers on globe surface for trade hubs
-    const globeRadius = 1.02; // Slightly above globe surface
-    tradeHubs.forEach((hub) => {
-      // Convert lat/lon to 3D position
-      const position = latLonToVector3(hub.lat, hub.lon, globeRadius);
-
-      // Create glowing marker sphere
-      const markerGeometry = new THREE.SphereGeometry(0.015, 16, 16);
-      const markerMaterial = new THREE.MeshBasicMaterial({
-        color: 0x00ffff, // Cyan glow
-        transparent: true,
-        opacity: 0, // Start hidden, will animate in
-      });
-      const markerMesh = new THREE.Mesh(markerGeometry, markerMaterial);
-      markerMesh.position.copy(position);
-
-      // Add glow effect (point light at marker position)
-      const markerLight = new THREE.PointLight(0x00ffff, 0.5, 0.2);
-      markerLight.position.copy(position);
-      scene.add(markerLight);
-
-      scene.add(markerMesh);
-      markerMeshesRef.current.push(markerMesh);
-    });
-
-    // Animation loop
-    let time = 0;
-    const animate = () => {
-      frameIdRef.current = requestAnimationFrame(animate);
-      time += 0.01;
-
-      // Slow rotation of Earth
-      if (globeRef.current) {
-        globeRef.current.rotation.y += 0.001;
-      }
-
-      // Cloud layer rotates slightly faster
-      if (cloudsRef.current) {
-        cloudsRef.current.rotation.y += 0.0012;
-      }
-
-      // Animate marker pulsing effect
-      if (markersVisible) {
-        markerMeshesRef.current.forEach((marker, index) => {
-          // Pulse animation using sine wave (each marker slightly offset)
-          const pulseSpeed = 0.002;
-          const pulsePhase = time + index * 0.5; // Offset each marker
-          const pulseScale = 1 + Math.sin(pulsePhase * pulseSpeed) * 0.15; // Pulse between 0.85 and 1.15
-
-          if (marker.material instanceof THREE.MeshBasicMaterial && marker.material.opacity > 0) {
-            marker.scale.setScalar(pulseScale);
+    loader.load(
+      MODEL_PATH,
+      (gltf) => {
+        const model = gltf.scene;
+        model.traverse((child) => {
+          if ((child as THREE.Mesh).isMesh) {
+            const mesh = child as THREE.Mesh;
+            mesh.castShadow = false;
+            mesh.receiveShadow = false;
+            if (mesh.material && 'toneMapped' in mesh.material) {
+              const material = mesh.material as THREE.MeshStandardMaterial;
+              material.toneMapped = true;
+              material.roughness = Math.min(0.9, (material.roughness ?? 0.8) * 1.1);
+              material.metalness = Math.max(0.1, (material.metalness ?? 0.3) * 0.8);
+              material.envMapIntensity = 0.6;
+            }
           }
         });
-      }
+        const bbox = new THREE.Box3().setFromObject(model);
+        const size = bbox.getSize(new THREE.Vector3());
+        const scale = 3.4 / Math.max(size.x, size.y, size.z);
+        model.scale.setScalar(scale);
+        model.position.y = -0.3;
+        pivot.add(model);
 
+        if (gltf.animations && gltf.animations.length) {
+          const mixer = new THREE.AnimationMixer(model);
+          gltf.animations.forEach((clip) => {
+            const action = mixer.clipAction(clip);
+            action.play();
+            action.setEffectiveWeight(1);
+            action.setEffectiveTimeScale(1);
+          });
+          mixerRef.current = mixer;
+        }
+
+        setIsLoaded(true);
+      },
+      undefined,
+      (error) => {
+        console.error('Failed to load globe model', error);
+      }
+    );
+
+    const animate = () => {
+      frameIdRef.current = requestAnimationFrame(animate);
+      const delta = clockRef.current.getDelta();
+      if (pivotRef.current) {
+        pivotRef.current.rotation.y += delta * 0.08;
+      }
+      if (mixerRef.current) {
+        mixerRef.current.update(delta);
+      }
       if (rendererRef.current && sceneRef.current && cameraRef.current) {
         rendererRef.current.render(sceneRef.current, cameraRef.current);
       }
     };
     animate();
 
-    // Handle resize
     const handleResize = () => {
-      if (!cameraRef.current || !rendererRef.current) return;
-      cameraRef.current.aspect = window.innerWidth / window.innerHeight;
+      if (!rendererRef.current || !cameraRef.current) return;
+      const { innerWidth, innerHeight } = window;
+      rendererRef.current.setPixelRatio(Math.min(window.devicePixelRatio, 1.6));
+      rendererRef.current.setSize(innerWidth, innerHeight);
+      cameraRef.current.aspect = innerWidth / innerHeight;
       cameraRef.current.updateProjectionMatrix();
-      rendererRef.current.setSize(window.innerWidth, window.innerHeight);
     };
+
     window.addEventListener('resize', handleResize);
 
-    // Cleanup
     return () => {
       window.removeEventListener('resize', handleResize);
-
       if (frameIdRef.current !== null) {
         cancelAnimationFrame(frameIdRef.current);
       }
-
-      if (rendererRef.current) {
-        rendererRef.current.dispose();
-      }
-
-      globeGeometry.dispose();
-      earthMaterial.dispose();
-      cloudGeometry.dispose();
-      cloudMaterial.dispose();
+      renderer.dispose();
+      scene.clear();
     };
   }, []);
 
-  // Handle progress-based animations
   useEffect(() => {
-    if (!containerRef.current || !isVisible) return;
+    if (!containerRef.current) return;
+    const easedOpacity = opacity * (isVisible ? 1 : 0);
+    containerRef.current.style.opacity = String(easedOpacity);
 
-    const container = containerRef.current;
-
-    // Smooth fade-in at scene start (complementing ship scene fade-out)
-    if (progress < 0.15) {
-      const fadeInProgress = progress / 0.15; // Fade in first 15%
-      container.style.opacity = String(fadeInProgress * opacity);
-    } else if (progress > 0.85) {
-      // Fade out and zoom in effect at end of scene (preparing for forest transition)
-      const fadeProgress = (progress - 0.85) / 0.15; // Fade in last 15%
-      container.style.opacity = String((1 - fadeProgress * 0.5) * opacity); // Fade to 50% opacity
-    } else {
-      container.style.opacity = String(opacity);
-    }
-
-    // Enhanced zoom effect toward end (zooming into Earth before forest transition)
     if (cameraRef.current) {
-      const baseZoom = 3 - progress * 0.5; // Base zoom
-      // Dramatic zoom acceleration in final 10% for pronounced forest transition
-      const endZoomBoost = progress > 0.9 ? (progress - 0.9) / 0.1 * 2.2 : 0; // Dramatic zoom in final 10%
-      cameraRef.current.position.z = baseZoom - endZoomBoost;
+      const zoom = THREE.MathUtils.lerp(6, 4.3, progress);
+      cameraRef.current.position.z = zoom;
+      cameraRef.current.position.y = THREE.MathUtils.lerp(0.4, 0.8, progress);
+      cameraRef.current.lookAt(0, 0, 0);
     }
 
-    // Animate 3D markers appearing on globe surface after 30% scroll
-    if (progress > 0.3) {
-      if (!markersVisible) {
-        setMarkersVisible(true);
-      }
-
-      // Stagger marker fade-in animation
-      markerMeshesRef.current.forEach((marker, index) => {
-        const markerDelay = index * 0.1; // Stagger each marker
-        const markerStart = 0.3 + markerDelay;
-        const markerEnd = markerStart + 0.2;
-
-        if (progress >= markerStart && progress <= markerEnd) {
-          const markerProgress = (progress - markerStart) / (markerEnd - markerStart);
-          if (marker.material instanceof THREE.MeshBasicMaterial) {
-            marker.material.opacity = markerProgress;
-          }
-          // Animate scale for "pop-in" effect
-          const scale = 0.5 + markerProgress * 0.5; // Scale from 0.5 to 1.0
-          marker.scale.setScalar(scale);
-        } else if (progress > markerEnd) {
-          if (marker.material instanceof THREE.MeshBasicMaterial) {
-            marker.material.opacity = 1;
-          }
-          marker.scale.setScalar(1);
-        }
-      });
+    if (pivotRef.current) {
+      pivotRef.current.rotation.x = THREE.MathUtils.degToRad(
+        THREE.MathUtils.lerp(15, 25, progress)
+      );
     }
-  }, [progress, opacity, isVisible, markersVisible]);
+  }, [progress, opacity, isVisible]);
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-screen overflow-hidden"
-      style={{ background: '#000814' }}
+      className="absolute inset-0 pointer-events-none"
+      style={{ opacity: 0, transition: 'opacity 0.6s ease', zIndex: 3 }}
     >
-      {/* Three.js Canvas */}
-      <canvas
-        ref={canvasRef}
-        className="absolute top-0 left-0 w-full h-full"
-        style={{ zIndex: 1 }}
-      />
-
-      {/* Content Overlay */}
-      <div
-        className="absolute inset-0 flex flex-col items-center justify-center text-white px-8"
-        style={{ zIndex: 10 }}
-      >
-        <h2
-          className="text-3xl md:text-4xl lg:text-5xl font-light tracking-widest text-center mb-12 max-w-4xl"
-          style={{ fontFamily: '"Josefin Sans", sans-serif' }}
-        >
-          ESTABLISHED IN THE WORLD'S MAJOR TRADE HUBS
-        </h2>
-
-        {/* Trade Hub Markers */}
-        <div className="flex flex-wrap justify-center gap-8 mt-16">
-          {tradeHubs.map((hub, index) => (
-            <div
-              key={hub.name}
-              className={`flex items-center gap-3 transition-all duration-700 ${
-                markersVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-              }`}
-              style={{
-                transitionDelay: `${index * 200}ms`,
-              }}
-            >
-              {/* Glowing dot */}
-              <div className="relative">
-                <div className="w-3 h-3 bg-cyan-400 rounded-full animate-pulse" />
-                <div className="absolute inset-0 w-3 h-3 bg-cyan-400 rounded-full blur-md opacity-70" />
-              </div>
-
-              {/* Location label */}
-              <span className="text-sm md:text-base tracking-widest font-light">
-                {hub.name}
-              </span>
-            </div>
-          ))}
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+      {!isLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center text-white/60 text-sm">
+          Loading globe…
         </div>
-      </div>
+      )}
     </div>
   );
 }

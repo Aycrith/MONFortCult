@@ -26,7 +26,7 @@ export default function DevTimelineHud({ progress }: DevTimelineHudProps) {
     <div
       style={{
         position: "fixed",
-        top: 16,
+        top: 96,
         left: 16,
         zIndex: 1000,
         padding: "12px 16px",

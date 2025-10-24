@@ -1,234 +1,135 @@
-# Handoff | 2025-10-22
+# ENGINE SCENE REDESIGN - Complete Overhaul 2025-10-23
 
-## Status: ✅ CINEMATIC ENHANCEMENTS COMPLETE
+## Status: ✅ ENGINE SCENE REDESIGNED - INDUSTRIAL AESTHETIC
 
-**Build:** ✓ Passing (288 KB)
-**Dev:** http://localhost:3000
-**Performance:** 60 FPS sustained
-
----
-
-## Latest Session Changes (Cinematic Polish - October 22)
-
-### **Phase 5: Visual Enhancement & Cinematic Motion (3 tasks complete)**
-16. ✅ Camera orbit animation implemented (Scene 1):
-   - 30° rotation around mountain during zoom-out
-   - 15° upward tilt for dramatic perspective
-   - Smooth reveal of new mountain angles
-   - Per ASSET_SPEC_SCENE1_MOUNTAIN.md specifications
-
-17. ✅ Multi-layer cloud system enhanced:
-   - 3 distinct parallax layers (0.3x, 0.6x, 1.0x speeds)
-   - Proper atmospheric opacity (35%, 45%, 55%)
-   - Dark grey/navy with blue tint per spec
-   - Enhanced depth perception
-
-18. ✅ Ship wake effects added (Scene 4):
-   - 8-particle water foam trail system
-   - V-wake pattern behind cargo ship
-   - Animated flow with progressive fade
-   - Realistic blue-white foam glow
+**File**: `src/components/scenes/ShipScene.tsx`
+**Issue**: Previous version was washed out, flat, and poorly composed
+**Solution**: Complete redesign with industrial/gritty aesthetic, animation-driven camera
+**Target**: Dramatic assembly sequence with workshop lighting and cinematic presentation
 
 ---
 
-## Files Modified (Current Session)
+## Design Direction (User-Approved)
+1. **Aesthetic**: Industrial/Gritty - Dark workshop vibe with dramatic shadows and rim lighting
+2. **Presentation**: Floating/Isolated - Engine suspended in dramatic void with no platform
+3. **Animation Focus**: Assembly/disassembly animations are the HERO feature
 
+---
+
+## Complete Redesign Implementation
+
+### 1. Scene Environment & Atmosphere ✅
+- Pure black background (`0x000000`) for dramatic industrial void
+- Added subtle exponential fog (`FogExp2`, density 0.015) for volumetric light rays
+- Removed all platform geometry - engine floats in pure space
+- Added DOM gradients: warm industrial vignette + bottom workshop glow
+
+### 2. Industrial Dramatic Lighting System ✅
+**Replaced 3 basic lights with 5-light industrial setup:**
+- **Ambient**: Very low (0.15 intensity) for deep blacks and high contrast
+- **Warm Key Light**: Orange industrial lamp (`0xff9955`, 3.5 intensity) from top-left
+- **Cool Rim Light**: Cyan edge definition (`0x4da6ff`, 2.0 intensity) from behind-right
+- **Accent Spotlight**: Warm white underlight (`0xfff5e6`, 2.5 intensity) for chrome reflections
+- **Fill Light**: Subtle cool fill (`0x88aacc`, 0.4 intensity) for shadow detail
+
+### 3. Animation-Driven Camera System ✅
+**Three distinct phases synchronized with assembly:**
+- **Phase 1 (0.0-0.3)**: Wide establishing shot
+  - Orbit: 10.0-9.0 units radius
+  - Height: 5.5-5.0 units (high angle)
+  - FOV: 52-50° (wide view to see disassembled parts)
+- **Phase 2 (0.3-0.7)**: DRAMATIC PUSH-IN during assembly
+  - Orbit: 9.0→4.5 units (smooth ease)
+  - Height: 5.0→2.5 units (descending)
+  - FOV: 50→42° (tightening)
+- **Phase 3 (0.7-1.0)**: Hero angle on completed engine
+  - Orbit: 4.5-3.8 units (very close)
+  - Height: 1.8 units (low angle looking up)
+  - FOV: 40° (tight, dramatic)
+
+### 4. Material Enhancements ✅
+- **Metalness**: Increased to 0.85-0.9 range (raw industrial metal)
+- **Roughness**: 0.35-0.65 range (varied for worn/polished areas)
+- **EnvMapIntensity**: 1.8 (strong reflections)
+- **Emissive**: Subtle hot metal glow (`0x331100`, 0.08 intensity) on metal parts
+
+### 5. Post-Processing Overhaul ✅
+- **Bloom Restored**: Threshold 0.6, strength 0.7-0.9 (selective highlights only)
+- **Dynamic Exposure**: Lerps from 0.7 (dark at start) → 1.45 (bright at assembly)
+- **Dynamic Bloom Strength**: Increases during assembly for drama
+- **Vignette**: Warm-tinted (`rgba(20,10,5,0.45)`) at 50% opacity
+- **Bottom Gradient**: Warm workshop glow from below
+
+### 6. Scale & Positioning ✅
+- Engine scale: 24.0 units (up from 18.0)
+- Centered positioning with minimal Y offset
+- Camera orbit dramatically closer (3.8-10.0 units vs previous 8.0-12.0)
+
+### 7. Overlay Adjustments ✅
+**File**: `src/components/overlays/ShipOverlay.tsx`
+- Reduced background darkness: `rgba(5,8,15,0.25)` → `transparent` gradient
+- Allows industrial 3D scene to shine through
+- Text remains readable with shadows
+
+---
+
+## Technical Details
+
+### Engine Model
+- Path: `/assets/3dmodel/Engine/v8_motorbike_engine_optimized.glb`
+- Baked animations: Assembly/disassembly controlled by scroll progress
+- Animation mixer: `setTime()` driven by smoothed scroll progress
+- Fallback: Simple Y-rotation if animations fail to load
+
+### Camera Behavior
+- Dynamic FOV updates every frame (`updateProjectionMatrix()`)
+- Subtle breathing motion (drift: 0.05-0.08 units)
+- Smooth easing during Phase 2 push-in for cinematic feel
+- Looks at engine center with minimal vertical drift
+
+### Performance
+- Pixel ratio capped at 1.6 for high-performance, 1.1 for low-end devices
+- Shadow map: 2048x2048 with PCF soft shadows
+- Bloom optimized: Only catches highlights above 0.6 threshold
+- Fog density kept very low to minimize performance impact
+
+---
+
+## Files Modified (This Session)
 ```
-PersistentBackground.tsx          # Camera orbit animation
-CloudOverlay.tsx                  # Multi-layer cloud enhancement
-scenes/ShipScene.tsx              # Ship wake effects
-OPTIMIZATION_SESSION_OCT22.md     # Full session documentation (NEW)
-```
-
----
-
-## Previous Session Changes (October 19-21)
-
-### **Phase 4.5: Terrain Model Optimization (4 major tasks)**
-- ✅ Brightness optimized: 60% emissive + height-based shader enhancement
-- ✅ Positioning fine-tuned: Scale 10.4, dramatic "hero" framing
-- ✅ Scroll animation: Smooth snow→rock morph during Scene 2 transition
-- ✅ Performance optimized: Frustum culling, mipmaps, anisotropic filtering
-
-### **Phase 4: Critical Animation Corrections (5 fixes)**
-11. ✅ Cloud drift direction corrected: now RIGHT→LEFT (per reference)
-12. ✅ Text panning rewritten: continuous cross-screen animation (MONTFORT exits left, divisions pan through)
-13. ✅ FORT ENERGY stage: displays alone without "MONTFORT" prefix (per reference "FORT EN...")
-14. ✅ Scene 2 duration: 10vh → 6vh for proper timing proportion (~15s reference)
-15. ✅ Light beams: added horizontal drift (±2% sinusoidal motion for organic feel)
-
-### **Phase 1: Text & Header (4 fixes)**
-1. ✅ Fixed "FORT ENERGY" text (was showing only "ENERGY")
-2. ✅ Header now visible on Scene 1 with white text (transitions to dark on scroll)
-3. ✅ Logo color: white → cyan (#6194b0)
-4. ✅ Text panning: simplified linear formula (words meet at center)
-
-### **Phase 2: Light Beams & Transformations (3 fixes)**
-5. ✅ Replaced horizontal scan → 6 vertical light beams
-6. ✅ Added Scene 2→3 reverse transformation (rock→snow, ocean→mist at 85-100%)
-7. ✅ Removed division cards from Scene 3 (per reference: they belong on Ship scene)
-
-### **Phase 3: Timing & Visual Polish (3 fixes)**
-8. ✅ Zoom timing: 1000vh → 300vh (~3s cinematic reveal)
-9. ✅ Forest background: added blur(4px) for depth-of-field
-10. ✅ Globe→Forest: dramatic zoom in final 10% (z: 2.75→0.5)
-
----
-
-## Animation Implementation Status
-
-**Scene 1 (WebGL Mountain):** ✅ Enhanced & Complete
-- Multi-layer mountains with depth
-- **Cinematic camera orbit (30° rotation + 15° tilt)** ✅ NEW
-- **Multi-layer cloud parallax (3 layers: 0.3x, 0.6x, 1.0x)** ✅ ENHANCED
-- **Photorealistic terrain with optimized brightness** ✅ NEW
-- Clouds drift RIGHT→LEFT ✅ FIXED
-- Zoom-out reveal (300vh)
-- Header overlay with proper styling
-- **Interactive menu panel with environmental controls** ✅ NEW
-
-**Scene 2 (Text Morph):** ✅ Complete
-- Continuous cross-screen text panning ✅ FIXED
-- 6 vertical light beams with horizontal drift ✅ FIXED
-- 3D mountain rotation/tilt
-- Snow→rock texture morph (MARITIME stage)
-- Mist→ocean transformation
-- **Atmospheric background crossfade** ✅ RESTORED
-- Reverse transformation (85-100%)
-- FORT ENERGY displays alone ✅ FIXED
-- Duration calibrated (6vh) ✅ FIXED
-
-**Scene 3 (Info Sections):** ✅ Enhanced & Complete
-- **"Who We Are" section with company stats and expanded narrative** ✅ NEW
-- **"What We Do" section with division showcase cards** ✅ NEW
-- Background transitions properly
-- Scroll-triggered fade-in animations
-
-**Scene 4 (Ship):** ✅ Enhanced & Complete
-- Cargo ship diagonal movement
-- **Realistic water wake effects (8-particle foam trail)** ✅ NEW
-- Dark storm atmosphere
-- Division taglines with fade transitions
-
-**Scene 5 (Globe):** ✅ Complete
-- Rotating Earth (Europe/Middle East focus)
-- Semi-transparent clouds
-- Glowing trade hub markers
-
-**Scene 6 (Forest/CSR):** ✅ Enhanced & Complete
-- Blurred forest background
-- God rays and dust particles
-- **Enriched Ethics & Compliance section** ✅ NEW
-- **Enhanced Sustainable Energy Solutions section** ✅ NEW
-- ESG interactive tabs
-- **Expanded Commitment to Equality with metrics** ✅ NEW
-- **Detailed CSR initiatives showcase** ✅ NEW
-- Photo strip with stagger animation
-
-**Scene 7 (Footer):** ✅ Complete
-
----
-
-## Content Gap Analysis: RESOLVED
-
-### ✅ Gaps Closed This Session
-
-1. **Header Menu System**
-   - ~~Missing environmental control panel~~ → **ADDED:** Full menu panel with DAWN/DUSK/NIGHT/SNOW/TOUR controls
-   - Menu now accessible from both header and scene controls button
-
-2. **Scene 3 "Who We Are"**
-   - ~~Minimal content (1-2 paragraphs)~~ → **ENHANCED:** 4 paragraphs + statistics grid + company narrative
-   - Added visual interest with key metrics (3 hubs, 4 divisions, 50+ countries, 24/7 operations)
-
-3. **Scene 3 "What We Do"**
-   - ~~Generic single paragraph~~ → **TRANSFORMED:** 4 division showcase cards with icons, descriptions, and value tags
-   - Clear visual hierarchy and interactive hover states
-
-4. **Scene 6 CSR Content**
-   - ~~Generic placeholder text~~ → **ENRICHED:** Detailed initiatives across 4 key areas (Education, Conservation, Health, Employment)
-   - Added compliance pillars, equality metrics, and sustainable energy focus
-   - More authentic and meaningful content
-
-5. **Visual Polish**
-   - ~~Atmospheric background commented out~~ → **RESTORED:** Scene 2 background crossfade active
-   - All transitions smooth and aligned with reference
-
----
-
-## Remaining Work
-
-**High-Impact Enhancements:**
-- LOD (Level of Detail) system for 3D models
-- Texture compression (KTX2/Basis Universal)
-- Ambient Occlusion baking for terrain
-- Local asset migration (ship image)
-
-**Recommended Testing:**
-- Visual QA against reference video on live dev server
-- Mobile device performance testing (iOS Safari, Chrome Android)
-- Cross-browser compatibility check (Firefox, Safari, Edge)
-- Performance profiling on lower-end hardware
-
----
-
-## Stack
-
-Next.js 15.5.5 | Three.js 0.169 | GSAP 3.13 | Lenis 1.3.11
-
-```bash
-npm run dev    # :3000
-npm run build  # ✓ 288 KB (+3KB from previous)
+src/components/scenes/ShipScene.tsx           # Complete redesign
+src/components/overlays/ShipOverlay.tsx       # Reduced overlay darkness
 ```
 
 ---
 
-## Key Accomplishments This Session (October 22)
+## Expected Results
 
-### Cinematic Quality
-- Camera orbit animation adds dynamic reveal during hero zoom
-- Multi-layer cloud system creates strong atmospheric depth
-- Ship wake effects enhance maritime scene realism
-- All enhancements maintain 60 FPS performance
-
-### Technical Excellence
-- 88 lines of optimized code added
-- Zero errors or TypeScript issues
-- Full compliance with ASSET_SPEC_SCENE1_MOUNTAIN.md
-- Performance-conscious implementations (GPU-accelerated where possible)
-
-### Visual Impact
-- Hero scene now has cinematic camera movement
-- Atmospheric depth matches reference video quality
-- Maritime scene has realistic water disturbance
-- Landing page achieves reference-quality visual fidelity
-
-### Previous Accomplishments (October 19-21)
-
-#### Terrain Optimization
-- Photorealistic mountain with 2x brightness increase
-- Height-based shader for dramatic lighting
-- Smooth snow→rock morphing animation
-- Frustum culling and texture optimization
-
-#### Content Completeness
-- All major content gaps identified in MontFort_Visual_Animation_Breakdown2feedback.md have been addressed
-- Landing page now has comprehensive, meaningful content across all scenes
-- No more "blank and open spaces" - every section is fully populated
+### Visual Quality
+- ✅ **Dramatic industrial aesthetic** with warm/cool lighting contrast
+- ✅ **Clear engine visibility** with metallic shine and depth
+- ✅ **Hero assembly sequence** - parts float → assemble → hero shot
+- ✅ **Professional cinematic quality** matching Montfort brand
 
 ### User Experience
-- Interactive menu panel accessible from header (matches reference site)
-- Environmental controls give users agency over scene presentation
-- Rich, detailed information without overwhelming the user
+- **Scroll 0-30%**: See engine parts floating in void, wide camera view
+- **Scroll 30-70%**: Watch parts dramatically assemble as camera pushes in
+- **Scroll 70-100%**: Completed engine from low dramatic angle with glow
 
-### Visual Fidelity
-- Atmospheric background crossfade restored for proper maritime transformation
-- Division showcase cards add visual interest to "What We Do" section
-- Statistics and metrics provide credibility and visual breaking points
+---
 
-### Build Health
-- ✓ Build passing with 288 KB bundle (minimal size increase)
-- ✓ No TypeScript errors
-- ✓ All components properly integrated
+## Testing Checklist
+- [ ] Verify engine is clearly visible (not washed out)
+- [ ] Check assembly animation plays smoothly with scroll
+- [ ] Confirm camera phases transition smoothly
+- [ ] Validate industrial lighting creates depth and contrast
+- [ ] Test on both high-performance and low-performance devices
+- [ ] Verify text overlay remains readable
+- [ ] Check FPS performance (should maintain 60fps on modern hardware)
 
-**Next Steps:** Test on dev server (npm run dev) to verify all animations and content display correctly. The landing page is now feature-complete and content-rich, matching the visual fidelity goals of the reference site.
+---
+
+## Dev Server
+- Running on: `http://localhost:3000`
+- Hot reload: Enabled (changes auto-refresh)
+- FPS counter: Top-left corner for performance monitoring

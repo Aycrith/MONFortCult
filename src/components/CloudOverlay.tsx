@@ -16,6 +16,16 @@ interface CloudLayer {
   opacity: number;
 }
 
+interface MagicalParticle {
+  id: number;
+  x: number;
+  y: number;
+  size: number;
+  opacity: number;
+  speed: number;
+  phase: number;
+}
+
 interface CloudOverlayProps {
   cloudCount?: number;
   cloudsPath?: string;
@@ -30,16 +40,17 @@ export default function CloudOverlay({
   const containerRef = useRef<HTMLDivElement>(null);
   const [clouds, setClouds] = useState<CloudLayer[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [particles, setParticles] = useState<MagicalParticle[]>([]);
 
-  // ✨ MULTI-LAYER CLOUD SYSTEM - 3 distinct layers per ASSET_SPEC_SCENE1_MOUNTAIN.md
-  // Layer 1 (Farthest): 0.3x speed, lowest opacity
-  // Layer 2 (Mid): 0.6x speed, medium opacity
-  // Layer 3 (Nearest): 1.0x speed, highest opacity
+  // ✨ MYSTICAL DREAMY CLOUD SYSTEM - 3 ethereal layers with soft glow
+  // Layer 1 (Farthest): 0.3x speed, softest glow
+  // Layer 2 (Mid): 0.6x speed, medium glow
+  // Layer 3 (Nearest): 1.0x speed, brightest highlights
   useEffect(() => {
     const cloudLayers: CloudLayer[] = [];
     const layerSpeeds = [0.3, 0.6, 1.0]; // Parallax multipliers (farthest to nearest)
-    const layerOpacities = [0.45, 0.60, 0.75]; // INCREASED for better visibility (was 0.35, 0.45, 0.55)
-    const layerScales = [1.8, 1.4, 1.0]; // LARGER clouds for more atmospheric presence
+    const layerOpacities = [0.55, 0.70, 0.85]; // INCREASED for dreamy ethereal visibility
+    const layerScales = [2.0, 1.6, 1.2]; // LARGER for more atmospheric presence
 
     for (let i = 1; i <= cloudCount; i++) {
       const frameNumber = String(i).padStart(2, '0');
@@ -57,6 +68,22 @@ export default function CloudOverlay({
     }
 
     setClouds(cloudLayers);
+
+    // ✨ MYSTICAL PARTICLES - Floating magical orbs
+    const magicalParticles: MagicalParticle[] = [];
+    for (let i = 0; i < 15; i++) {
+      magicalParticles.push({
+        id: i,
+        x: Math.random() * 100,
+        y: Math.random() * 60 + 20, // Upper portion of screen
+        size: 2 + Math.random() * 4, // 2-6px
+        opacity: 0.3 + Math.random() * 0.4, // 0.3-0.7
+        speed: 0.15 + Math.random() * 0.25, // Varied speeds
+        phase: Math.random() * Math.PI * 2, // Random starting phase
+      });
+    }
+    setParticles(magicalParticles);
+
     setIsLoaded(true);
   }, [cloudCount, cloudsPath]);
 
@@ -83,6 +110,32 @@ export default function CloudOverlay({
       });
     });
   }, [scrollProgress, clouds, isLoaded]);
+
+  // ✨ Animate magical particles with floating motion
+  useEffect(() => {
+    if (!isLoaded || !containerRef.current) return;
+
+    particles.forEach((particle) => {
+      const particleElement = document.getElementById(`particle-${particle.id}`);
+      if (!particleElement) return;
+
+      // Floating animation: gentle vertical drift + horizontal sway
+      const time = scrollProgress * 100 + particle.phase;
+      const floatY = Math.sin(time * particle.speed) * 20; // Vertical float
+      const swayX = Math.cos(time * particle.speed * 0.7) * 15; // Horizontal sway
+
+      // Fade out as we scroll
+      const fadeOpacity = Math.max(0, particle.opacity * (1 - scrollProgress * 1.2));
+
+      gsap.to(particleElement, {
+        x: swayX,
+        y: floatY,
+        opacity: fadeOpacity,
+        duration: 0.1,
+        ease: 'none',
+      });
+    });
+  }, [scrollProgress, particles, isLoaded]);
 
   if (!isLoaded) return null;
 
@@ -111,21 +164,54 @@ export default function CloudOverlay({
             alt=""
             className="w-full h-full object-contain"
             style={{
-              mixBlendMode: 'multiply', // Changed from 'normal' - darkens and integrates better
-              filter: 'brightness(0.35) contrast(1.3) saturate(0.7)', // MUCH darker, more contrast
-              // Dark navy tint applied via background overlay below
+              mixBlendMode: 'screen', // MYSTICAL: Screen blend for ethereal glow effect
+              filter: 'brightness(0.85) contrast(1.1) saturate(0.85) blur(1px)', // Softer, dreamier
             }}
             onError={(e) => {
               // Hide clouds that fail to load
               e.currentTarget.style.display = 'none';
             }}
           />
-          {/* Dark navy overlay for proper atmospheric color */}
-          <div 
+          {/* Soft purple/lavender glow overlay for mystical atmosphere */}
+          <div
             className="absolute inset-0 pointer-events-none"
             style={{
-              background: 'radial-gradient(ellipse at center, rgba(42, 58, 74, 0.8) 0%, rgba(42, 58, 74, 0.6) 50%, transparent 75%)',
-              mixBlendMode: 'multiply',
+              background: 'radial-gradient(ellipse at center, rgba(180, 160, 220, 0.25) 0%, rgba(150, 140, 200, 0.15) 50%, transparent 75%)',
+              mixBlendMode: 'soft-light',
+            }}
+          />
+        </div>
+      ))}
+
+      {/* ✨ MYSTICAL PARTICLES - Floating magical light orbs */}
+      {particles.map((particle) => (
+        <div
+          key={particle.id}
+          id={`particle-${particle.id}`}
+          className="absolute"
+          style={{
+            left: `${particle.x}%`,
+            top: `${particle.y}%`,
+            width: `${particle.size}px`,
+            height: `${particle.size}px`,
+            opacity: particle.opacity,
+          }}
+        >
+          {/* Particle core */}
+          <div
+            className="w-full h-full rounded-full"
+            style={{
+              background: 'radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(200, 180, 255, 0.6) 50%, transparent 100%)',
+              boxShadow: '0 0 8px rgba(220, 200, 255, 0.6), 0 0 16px rgba(180, 160, 255, 0.3)',
+            }}
+          />
+          {/* Outer glow */}
+          <div
+            className="absolute inset-0 rounded-full"
+            style={{
+              transform: 'scale(2.5)',
+              background: 'radial-gradient(circle, rgba(200, 180, 255, 0.15) 0%, transparent 70%)',
+              pointerEvents: 'none',
             }}
           />
         </div>

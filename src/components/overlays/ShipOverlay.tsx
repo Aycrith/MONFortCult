@@ -61,12 +61,18 @@ export default function ShipOverlay({ progress, opacity, isVisible }: ShipOverla
         visibility: isVisible ? 'visible' : 'hidden',
         opacity,
         transition: 'opacity 0.4s ease',
-        background: 'linear-gradient(160deg, rgba(0,0,0,0.9) 0%, rgba(8,12,24,0.75) 65%, rgba(8,12,24,0.4) 100%)',
+        background: 'linear-gradient(160deg, rgba(5,8,15,0.25) 0%, rgba(8,12,20,0.15) 65%, transparent 100%)', // ✨ HEAVILY REDUCED darkness to showcase industrial engine scene
       }}
     >
       <div className="absolute inset-x-0 top-12 flex justify-center">
-        <div className="flex items-center gap-4 px-5 py-3 rounded-full border border-white/25 bg-white/10 backdrop-blur">
-          <span className="text-[11px] tracking-[0.4em] uppercase text-white/60">Divisions</span>
+        <div
+          className="flex items-center gap-4 px-5 py-3 rounded-full border border-white/30 backdrop-blur-md"
+          style={{
+            background: 'rgba(255, 255, 255, 0.08)', // ✨ Subtle glass morphism
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.1)',
+          }}
+        >
+          <span className="text-[11px] tracking-[0.4em] uppercase text-white/70">Divisions</span>
           <div className="flex gap-3 text-[11px] tracking-[0.35em] uppercase">
             {segments.map((division, divisionIndex) => {
               const active = divisionIndex === safeIndex;
@@ -92,6 +98,7 @@ export default function ShipOverlay({ progress, opacity, isVisible }: ShipOverla
             opacity: headlineOpacity,
             transform: `translateY(${(0.5 - headlineOpacity) * 40}px)`,
             transition: 'opacity 0.4s ease, transform 0.4s ease',
+            textShadow: '0 4px 20px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4)', // ✨ Text shadow for better readability
           }}
         >
           <p className="text-xs tracking-[0.5em] uppercase text-white/50 mb-6">

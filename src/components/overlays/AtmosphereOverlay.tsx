@@ -33,29 +33,34 @@ export default function AtmosphereOverlay({ progress }: AtmosphereOverlayProps) 
 
   return (
     <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 3 }}>
+      {/* ✨ MINIMAL ATMOSPHERE - Very subtle, non-intrusive */}
       <div
         className="absolute inset-0 mix-blend-lighten"
         style={{
-          opacity: heroFog,
+          opacity: heroFog * 0.15, // DRASTICALLY reduced from 0.7 for minimal effect
           backgroundImage: "url('/assets/clouds/35.png')",
           backgroundSize: "cover",
           backgroundPosition: "center",
-          filter: "blur(22px)",
-          transform: "scale(1.05)",
+          filter: "blur(40px) brightness(1.3)", // Heavy blur for soft haze only
+          transform: "scale(1.2)",
           transition: "opacity 0.4s ease",
         }}
       />
 
+      {/* ✨ REMOVED: Video layer causing muddiness */}
+      {/* Video background disabled for clarity */}
+
+      {/* ✨ SHIP SCENE FOG - Minimal for ship scene */}
       <div
         className="absolute inset-0"
         style={{
-          opacity: shipFog,
+          opacity: shipFog * 0.3, // Reduced for subtlety
           backgroundImage: "url('/assets/clouds/62.png')",
           backgroundSize: "cover",
           backgroundPosition: "center",
-          filter: "blur(32px)",
-          transform: "scale(1.08)",
-          mixBlendMode: "screen",
+          filter: "blur(35px)", // Heavier blur for haze effect
+          transform: "scale(1.1)",
+          mixBlendMode: "soft-light",
           transition: "opacity 0.4s ease",
         }}
       />
