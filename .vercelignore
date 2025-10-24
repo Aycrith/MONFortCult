@@ -1,0 +1,33 @@
+# Large media files that should not be deployed
+*.mp4
+*.mov
+*.avi
+
+# Development files
+Firefox*.json
+debug-report*.json
+react-profiling-data*.json
+trace-*.zip
+
+# Build and cache
+.next/cache/
+.next/static/
+
+# Large documentation
+ASSET_*.md
+COMPREHENSIVE_ANIMATION_ENHANCEMENT_PLAN.md
+HERO_ENGINE_SCENE_ENHANCEMENTS.md
+IMPLEMENTATION_SUMMARY.md
+QUICK_START_GUIDE.md
+MontFort_Visual_Animation_Breakdown*.md
+TESTING_CHECKLIST*.md
+OPTIMIZATION_SESSION*.md
+DEVELOPMENT_STATUS*.md
+
+# Screenshot files
+screenCapture*.JPG
+debugscreenshot/
+
+# IDE
+.claude/
+.playwright-mcp/
