@@ -1,0 +1,42 @@
+[
+  {
+    "tone": "dawn",
+    "reached": 0.94026,
+    "overlayBg": "linear-gradient(rgba(106, 82, 54, 0.36) 0%, rgba(72, 96, 76, 0.74) 55%, rgba(46, 64, 54, 0.86) 100%)",
+    "vignetteBg": "radial-gradient(circle at 45% 0%, rgba(255, 214, 164, 0.38) 0%, rgba(33, 46, 39, 0.78) 70%)",
+    "overlayOpacity": 0.85,
+    "vignetteOpacity": 0.9,
+    "brightness": 0.68,
+    "shotPath": "C:\\Users\\camer\\Desktop\\JulesLandingPage\\MONFortCult\\debugscreenshot\\forest-dawn-p0.94.png"
+  },
+  {
+    "tone": "day",
+    "reached": 0.94026,
+    "overlayBg": "linear-gradient(rgba(124, 178, 139, 0.28) 0%, rgba(66, 112, 84, 0.68) 58%, rgba(42, 74, 56, 0.8) 100%)",
+    "vignetteBg": "radial-gradient(circle at 50% 0%, rgba(168, 224, 186, 0.24) 0%, rgba(34, 52, 40, 0.7) 72%)",
+    "overlayOpacity": 0.82,
+    "vignetteOpacity": 0.85,
+    "brightness": 0.78,
+    "shotPath": "C:\\Users\\camer\\Desktop\\JulesLandingPage\\MONFortCult\\debugscreenshot\\forest-day-p0.94.png"
+  },
+  {
+    "tone": "dusk",
+    "reached": 0.94026,
+    "overlayBg": "linear-gradient(rgba(54, 94, 130, 0.32) 0%, rgba(30, 52, 74, 0.78) 60%, rgba(18, 32, 48, 0.9) 100%)",
+    "vignetteBg": "radial-gradient(circle at 42% 0%, rgba(116, 164, 210, 0.32) 0%, rgba(14, 24, 36, 0.82) 72%)",
+    "overlayOpacity": 0.88,
+    "vignetteOpacity": 0.92,
+    "brightness": 0.52,
+    "shotPath": "C:\\Users\\camer\\Desktop\\JulesLandingPage\\MONFortCult\\debugscreenshot\\forest-dusk-p0.94.png"
+  },
+  {
+    "tone": "night",
+    "reached": 0.94026,
+    "overlayBg": "linear-gradient(rgba(42, 68, 102, 0.4) 0%, rgba(18, 36, 60, 0.84) 58%, rgba(10, 22, 40, 0.95) 100%)",
+    "vignetteBg": "radial-gradient(circle at 50% 0%, rgba(96, 150, 204, 0.3) 0%, rgba(6, 12, 20, 0.88) 74%)",
+    "overlayOpacity": 0.92,
+    "vignetteOpacity": 0.96,
+    "brightness": 0.44,
+    "shotPath": "C:\\Users\\camer\\Desktop\\JulesLandingPage\\MONFortCult\\debugscreenshot\\forest-night-p0.94.png"
+  }
+]

@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "npx tsc --noEmit && next lint",
+    "capture:forest": "node scripts/run_forest_captures.js",
+  "test:forest": "node scripts/run_forest_captures.js",
     "format": "npx biome format --write",
     "setup-vercel": "node scripts/setup-vercel.js",
     "deploy": "vercel deploy --prod",

@@ -7,6 +7,7 @@ import TextMorphScene from '@/components/scenes/TextMorphScene';
 import InfoSectionsOverlay from '@/components/scenes/InfoSectionsOverlay';
 import ShipScene from '@/components/scenes/ShipScene';
 import { GlobeSceneWrapper, ForestSceneWrapper } from '@/components/scenes/SceneWrappers';
+import type { SceneTone } from '@/components/MenuPanel';
 import MasterScrollContainer, {
   SCENE_TIMING,
   getSceneProgress,
@@ -38,6 +39,7 @@ export default function Homepage() {
   const logoRef = useRef<HTMLDivElement>(null);
   const prefersReducedMotion = usePrefersReducedMotion();
   const AUTOPLAY_NOTICE = 'Tap anywhere on the experience to unlock audio.';
+  const tone: SceneTone = 'dusk';
   const [soundscapeEnabled, setSoundscapeEnabled] = useState(!prefersReducedMotion);
   const [soundNotice, setSoundNotice] = useState<string | null>(null);
   const { updateProgress: updateSoundscape, isAutoplayBlocked } = useAdaptiveSoundscape({
@@ -357,6 +359,7 @@ export default function Homepage() {
                   progress={globeProgress}
                   opacity={globeOpacity}
                   isVisible={globeProgress !== null}
+                  tone={tone}
                 />
               )}
 
@@ -366,6 +369,7 @@ export default function Homepage() {
                   progress={forestProgress}
                   opacity={forestOpacity}
                   isVisible={forestProgress !== null}
+                  tone={tone}
                 />
               )}
 

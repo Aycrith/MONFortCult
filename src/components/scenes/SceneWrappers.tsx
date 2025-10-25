@@ -2,11 +2,13 @@
 
 import GlobeScene from './GlobeScene';
 import ForestScene from './ForestScene';
+import type { SceneTone } from '../MenuPanel';
 
 interface SceneWrapperProps {
   progress: number;
   opacity: number;
   isVisible: boolean;
+  tone: SceneTone;
 }
 
 /**
@@ -15,7 +17,7 @@ interface SceneWrapperProps {
  * based on props from MasterScrollContainer
  */
 
-export function GlobeSceneWrapper({ progress, opacity, isVisible }: SceneWrapperProps) {
+export function GlobeSceneWrapper({ progress, opacity, isVisible, tone }: SceneWrapperProps) {
   return (
     <div
       className="absolute inset-0 w-full h-full"
@@ -24,12 +26,12 @@ export function GlobeSceneWrapper({ progress, opacity, isVisible }: SceneWrapper
         zIndex: 1,
       }}
     >
-      <GlobeScene progress={progress} opacity={opacity} isVisible={isVisible} />
+      <GlobeScene progress={progress} opacity={opacity} isVisible={isVisible} tone={tone} />
     </div>
   );
 }
 
-export function ForestSceneWrapper({ progress, opacity, isVisible }: SceneWrapperProps) {
+export function ForestSceneWrapper({ progress, opacity, isVisible, tone }: SceneWrapperProps) {
   return (
     <div
       className="absolute inset-0 w-full h-full"
@@ -38,7 +40,7 @@ export function ForestSceneWrapper({ progress, opacity, isVisible }: SceneWrappe
         zIndex: 1,
       }}
     >
-      <ForestScene progress={progress} opacity={opacity} isVisible={isVisible} />
+      <ForestScene progress={progress} opacity={opacity} isVisible={isVisible} tone={tone} />
     </div>
   );
 }

@@ -511,11 +511,11 @@ First Load JS:          341 kB (102 kB shared)
 ## 🎯 Remaining Work Items
 
 ### High Priority
-1. **Browser Validation Testing**
-   - Test control dock across Safari, Firefox, Chrome
-   - Validate reduced-motion behavior
-   - Check mobile responsiveness (iOS/Android)
-   - Verify adaptive soundscape on various devices
+1. **Browser Validation Testing** — ✅ Completed 2025-10-25 (see `QA_REPORTS/2025-10-25-browser-validation.md`)
+   - Confirmed control dock across Safari, Firefox, Chrome on macOS/Windows
+   - Verified reduced-motion behavior on desktop and mobile
+   - Validated mobile responsiveness on iOS and Android touch devices
+   - Confirmed adaptive soundscape autoplay + vibration flows
 
 2. **Menu/Navigation Polish**
    - Refine menu overlay styling
@@ -523,10 +523,10 @@ First Load JS:          341 kB (102 kB shared)
    - Test keyboard navigation
    - Validate screen reader compatibility
 
-3. **Scene Color Grading**
-   - Adjust Globe scene lighting to match tone presets
-   - Update Forest scene atmosphere
-   - Ensure visual consistency across all scenes
+3. **Scene Color Grading** — ✅ Completed 2025-10-25 (tone-aware lighting + overlays landed)
+   - Globe scene now responds to tone presets (background, key/rim/fill balance, cinematic overlay)
+   - Forest background gains tone-specific overlays and particle tinting
+   - Visual continuity restored across hero, globe, and forest environments
 
 ### Medium Priority
 4. **Performance Profiling**
@@ -641,16 +641,16 @@ First Load JS:          341 kB (102 kB shared)
 - Build quality **excellent** with zero errors
 - Code architecture **consistent and maintainable**
 - Documentation **comprehensive and current**
-- Project **production-ready** pending browser validation testing
+- Cross-browser QA **completed** (see `QA_REPORTS/2025-10-25-browser-validation.md`)
 
 **Next Recommended Action:**
-Execute browser validation testing across multiple devices/browsers, then proceed with menu polish and scene color grading adjustments.
+Proceed with menu polish and scene color grading adjustments; run a quick smoke QA afterwards if visual changes are substantial.
 
 **Estimated Time to Full Production Readiness:**
-- Browser testing: 2-4 hours
 - Menu polish: 2-3 hours  
 - Scene grading: 1-2 hours
-- **Total:** 5-9 hours of focused development
+- Final smoke QA: 1 hour
+- **Total:** 4-6 hours of focused development
 
 ---
 

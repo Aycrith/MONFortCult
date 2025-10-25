@@ -212,6 +212,7 @@ export default function Homepage() {
                   progress={globeProgress}
                   opacity={globeOpacity}
                   isVisible={globeProgress !== null}
+                  tone={tone}
                 />
               )}
 

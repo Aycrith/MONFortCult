@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
+import type { SceneTone } from '../MenuPanel';
 
 /**
  * ForestScene (Scene 6) - NOW A CANVAS LAYER
@@ -23,6 +24,7 @@ interface ForestSceneProps {
   progress: number; // Scene-local progress (0-1)
   opacity: number; // Scene opacity for crossfading (0-1)
   isVisible: boolean; // Whether scene is currently visible
+  tone: SceneTone;
 }
 
 type ESGCategory = 'environmental' | 'social' | 'governance';
@@ -34,29 +36,96 @@ interface ESGIcon {
 
 const ESG_DATA: Record<ESGCategory, ESGIcon[]> = {
   environmental: [
-    { label: 'Clean Energy', icon: '⚡' },
-    { label: 'Climate Change', icon: '🌍' },
-    { label: 'Renewable Resources', icon: '♻️' },
-    { label: 'Carbon Reduction', icon: '🌱' },
-    { label: 'Sustainability', icon: '🍃' },
+    { label: 'Clean Energy', icon: 'ΓÜí' },
+    { label: 'Climate Change', icon: '≡ƒîì' },
+    { label: 'Renewable Resources', icon: 'ΓÖ╗∩╕Å' },
+    { label: 'Carbon Reduction', icon: '≡ƒî▒' },
+    { label: 'Sustainability', icon: '≡ƒìâ' },
   ],
   social: [
-    { label: 'Community Support', icon: '🤝' },
-    { label: 'Employee Wellbeing', icon: '💼' },
-    { label: 'Diversity & Inclusion', icon: '🌈' },
-    { label: 'Health & Safety', icon: '🛡️' },
-    { label: 'Education', icon: '📚' },
+    { label: 'Community Support', icon: '≡ƒñ¥' },
+    { label: 'Employee Wellbeing', icon: '≡ƒÆ╝' },
+    { label: 'Diversity & Inclusion', icon: '≡ƒîê' },
+    { label: 'Health & Safety', icon: '≡ƒ¢í∩╕Å' },
+    { label: 'Education', icon: '≡ƒôÜ' },
   ],
   governance: [
-    { label: 'Transparency', icon: '📊' },
-    { label: 'Ethics & Compliance', icon: '⚖️' },
-    { label: 'Risk Management', icon: '🎯' },
-    { label: 'Accountability', icon: '✓' },
-    { label: 'Board Oversight', icon: '👥' },
+    { label: 'Transparency', icon: '≡ƒôè' },
+    { label: 'Ethics & Compliance', icon: 'ΓÜû∩╕Å' },
+    { label: 'Risk Management', icon: '≡ƒÄ»' },
+    { label: 'Accountability', icon: 'Γ£ô' },
+    { label: 'Board Oversight', icon: '≡ƒæÑ' },
   ],
 };
 
-export default function ForestScene({ progress, opacity, isVisible }: ForestSceneProps) {
+type ForestTonePreset = {
+  brightness: number;
+  overlay: { background: string; opacity: number };
+  vignette: { background: string; opacity: number };
+  rayGradient: string;
+  dustColor: string;
+};
+
+const FOREST_TONE_PRESETS: Record<SceneTone, ForestTonePreset> = {
+  dawn: {
+    brightness: 0.68,
+    overlay: {
+      background:
+        'linear-gradient(180deg, rgba(106,82,54,0.36) 0%, rgba(72,96,76,0.74) 55%, rgba(46,64,54,0.86) 100%)',
+      opacity: 0.85,
+    },
+    vignette: {
+      background: 'radial-gradient(circle at 45% 0%, rgba(255,214,164,0.38) 0%, rgba(33,46,39,0.78) 70%)',
+      opacity: 0.9,
+    },
+    rayGradient: 'linear-gradient(180deg, rgba(242,206,153,0) 0%, rgba(242,206,153,0.4) 45%, rgba(242,206,153,0) 100%)',
+    dustColor: 'rgba(242,206,153,0.55)',
+  },
+  day: {
+    brightness: 0.78,
+    overlay: {
+      background:
+        'linear-gradient(180deg, rgba(124,178,139,0.28) 0%, rgba(66,112,84,0.68) 58%, rgba(42,74,56,0.8) 100%)',
+      opacity: 0.82,
+    },
+    vignette: {
+      background: 'radial-gradient(circle at 50% 0%, rgba(168,224,186,0.24) 0%, rgba(34,52,40,0.7) 72%)',
+      opacity: 0.85,
+    },
+    rayGradient: 'linear-gradient(180deg, rgba(176,226,190,0) 0%, rgba(176,226,190,0.34) 45%, rgba(176,226,190,0) 100%)',
+    dustColor: 'rgba(176,226,190,0.48)',
+  },
+  dusk: {
+    brightness: 0.52,
+    overlay: {
+      background:
+        'linear-gradient(180deg, rgba(54,94,130,0.32) 0%, rgba(30,52,74,0.78) 60%, rgba(18,32,48,0.9) 100%)',
+      opacity: 0.88,
+    },
+    vignette: {
+      background: 'radial-gradient(circle at 42% 0%, rgba(116,164,210,0.32) 0%, rgba(14,24,36,0.82) 72%)',
+      opacity: 0.92,
+    },
+    rayGradient: 'linear-gradient(180deg, rgba(126,182,226,0) 0%, rgba(126,182,226,0.38) 45%, rgba(126,182,226,0) 100%)',
+    dustColor: 'rgba(126,182,226,0.45)',
+  },
+  night: {
+    brightness: 0.44,
+    overlay: {
+      background:
+        'linear-gradient(180deg, rgba(42,68,102,0.4) 0%, rgba(18,36,60,0.84) 58%, rgba(10,22,40,0.95) 100%)',
+      opacity: 0.92,
+    },
+    vignette: {
+      background: 'radial-gradient(circle at 50% 0%, rgba(96,150,204,0.3) 0%, rgba(6,12,20,0.88) 74%)',
+      opacity: 0.96,
+    },
+    rayGradient: 'linear-gradient(180deg, rgba(106,164,226,0) 0%, rgba(106,164,226,0.36) 45%, rgba(106,164,226,0) 100%)',
+    dustColor: 'rgba(110,174,226,0.42)',
+  },
+};
+
+export default function ForestScene({ progress, opacity, isVisible, tone }: ForestSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const backgroundRef = useRef<HTMLDivElement>(null);
   const photoStripRef = useRef<HTMLDivElement>(null);
@@ -72,6 +141,8 @@ export default function ForestScene({ progress, opacity, isVisible }: ForestScen
       opacity: number;
     }>
   >([]);
+
+  const palette = FOREST_TONE_PRESETS[tone];
 
   useEffect(() => {
     // Generate random god ray particles
@@ -129,7 +200,7 @@ export default function ForestScene({ progress, opacity, isVisible }: ForestScen
     // CSR Photo strip fade-in animation at 70% progress
     if (photoStrip && progress > 0.7) {
       const photos = photoStrip.querySelectorAll('.csr-photo');
-      const photoProgress = (progress - 0.7) / 0.3; // 0→1 over last 30%
+      const photoProgress = (progress - 0.7) / 0.3; // 0ΓåÆ1 over last 30%
 
       photos.forEach((photo, index) => {
         const staggerDelay = index * 0.05;
@@ -158,22 +229,34 @@ export default function ForestScene({ progress, opacity, isVisible }: ForestScen
       <div
         ref={backgroundRef}
         className="fixed top-0 left-0 w-full h-screen bg-cover bg-center -z-10"
+        data-testid="forest-bg"
         style={{
           backgroundImage: 'url(/assets/backgrounds/Asset_6_Forest_Background16x9_Upscale.png)',
-          filter: 'brightness(0.6) blur(8px)', // Enhanced depth-of-field effect
+          filter: `brightness(${palette.brightness}) blur(8px)`, // tone-aware depth-of-field effect
         }}
       >
+        <div
+          className="absolute inset-0 pointer-events-none"
+          data-testid="forest-overlay"
+          style={{ background: palette.overlay.background, opacity: palette.overlay.opacity }}
+        />
+        <div
+          className="absolute inset-0 pointer-events-none mix-blend-soft-light"
+          data-testid="forest-vignette"
+          style={{ background: palette.vignette.background, opacity: palette.vignette.opacity }}
+        />
         {/* God Ray Particles */}
         <div className="absolute inset-0 overflow-hidden">
           {godRays.map((ray, index) => (
             <div
               key={`ray-${index}`}
-              className="absolute top-0 w-1 h-full bg-gradient-to-b from-transparent via-white/20 to-transparent animate-pulse"
+              className="absolute top-0 w-1 h-full animate-pulse"
               style={{
                 left: ray.left,
                 animationDelay: `${ray.delay}s`,
                 animationDuration: `${ray.duration}s`,
                 filter: 'blur(2px)',
+                background: palette.rayGradient,
               }}
             />
           ))}
@@ -184,7 +267,7 @@ export default function ForestScene({ progress, opacity, isVisible }: ForestScen
           {dustParticles.map((particle, index) => (
             <div
               key={`dust-${index}`}
-              className="absolute rounded-full bg-white"
+              className="absolute rounded-full"
               style={{
                 left: particle.left,
                 top: particle.top,
@@ -194,6 +277,7 @@ export default function ForestScene({ progress, opacity, isVisible }: ForestScen
                 animation: `dustFloat ${particle.duration}s ease-in-out infinite`,
                 animationDelay: `${particle.delay}s`,
                 filter: 'blur(0.5px)',
+                backgroundColor: palette.dustColor,
               }}
             />
           ))}
@@ -219,17 +303,17 @@ export default function ForestScene({ progress, opacity, isVisible }: ForestScen
               {/* Compliance Pillars */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
                 <div className="text-center p-6 bg-white/50 backdrop-blur-sm rounded-lg">
-                  <div className="text-3xl mb-3">⚖️</div>
+                  <div className="text-3xl mb-3">ΓÜû∩╕Å</div>
                   <h3 className="text-[#374851] font-medium mb-2 tracking-wide">Regulatory Compliance</h3>
                   <p className="text-[#929ea6] text-sm">Full adherence to international trade laws and regulations</p>
                 </div>
                 <div className="text-center p-6 bg-white/50 backdrop-blur-sm rounded-lg">
-                  <div className="text-3xl mb-3">🔒</div>
+                  <div className="text-3xl mb-3">≡ƒöÆ</div>
                   <h3 className="text-[#374851] font-medium mb-2 tracking-wide">Data Protection</h3>
                   <p className="text-[#929ea6] text-sm">Stringent security measures for client and corporate data</p>
                 </div>
                 <div className="text-center p-6 bg-white/50 backdrop-blur-sm rounded-lg">
-                  <div className="text-3xl mb-3">🎯</div>
+                  <div className="text-3xl mb-3">≡ƒÄ»</div>
                   <h3 className="text-[#374851] font-medium mb-2 tracking-wide">Risk Management</h3>
                   <p className="text-[#929ea6] text-sm">Proactive identification and mitigation of operational risks</p>
                 </div>
@@ -250,19 +334,19 @@ export default function ForestScene({ progress, opacity, isVisible }: ForestScen
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-12">
                 <div className="text-center">
-                  <div className="text-4xl text-[#82b3c9] mb-2">🌞</div>
+                  <div className="text-4xl text-[#82b3c9] mb-2">≡ƒî₧</div>
                   <div className="text-sm text-[#929ea6] tracking-wide">Solar Energy</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-4xl text-[#82b3c9] mb-2">💨</div>
+                  <div className="text-4xl text-[#82b3c9] mb-2">≡ƒÆ¿</div>
                   <div className="text-sm text-[#929ea6] tracking-wide">Wind Power</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-4xl text-[#82b3c9] mb-2">⚡</div>
+                  <div className="text-4xl text-[#82b3c9] mb-2">ΓÜí</div>
                   <div className="text-sm text-[#929ea6] tracking-wide">Clean Tech</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-4xl text-[#82b3c9] mb-2">🔋</div>
+                  <div className="text-4xl text-[#82b3c9] mb-2">≡ƒöï</div>
                   <div className="text-sm text-[#929ea6] tracking-wide">Energy Storage</div>
                 </div>
               </div>
@@ -365,28 +449,28 @@ export default function ForestScene({ progress, opacity, isVisible }: ForestScen
               {/* CSR Initiatives */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12 mb-16">
                 <div className="flex gap-4 items-start bg-white/50 backdrop-blur-sm p-6 rounded-lg">
-                  <div className="text-3xl flex-shrink-0">📚</div>
+                  <div className="text-3xl flex-shrink-0">≡ƒôÜ</div>
                   <div>
                     <h3 className="text-[#374851] font-medium mb-2 tracking-wide">Education & Training</h3>
                     <p className="text-[#929ea6] text-sm leading-relaxed">Supporting youth education programs and vocational training in energy sector skills across our operating regions.</p>
                   </div>
                 </div>
                 <div className="flex gap-4 items-start bg-white/50 backdrop-blur-sm p-6 rounded-lg">
-                  <div className="text-3xl flex-shrink-0">🌳</div>
+                  <div className="text-3xl flex-shrink-0">≡ƒî│</div>
                   <div>
                     <h3 className="text-[#374851] font-medium mb-2 tracking-wide">Conservation Projects</h3>
                     <p className="text-[#929ea6] text-sm leading-relaxed">Active participation in reforestation initiatives and biodiversity protection programs in partnership with local NGOs.</p>
                   </div>
                 </div>
                 <div className="flex gap-4 items-start bg-white/50 backdrop-blur-sm p-6 rounded-lg">
-                  <div className="text-3xl flex-shrink-0">❤️</div>
+                  <div className="text-3xl flex-shrink-0">Γ¥ñ∩╕Å</div>
                   <div>
                     <h3 className="text-[#374851] font-medium mb-2 tracking-wide">Community Health</h3>
                     <p className="text-[#929ea6] text-sm leading-relaxed">Healthcare infrastructure support and medical outreach programs in underserved communities where we operate.</p>
                   </div>
                 </div>
                 <div className="flex gap-4 items-start bg-white/50 backdrop-blur-sm p-6 rounded-lg">
-                  <div className="text-3xl flex-shrink-0">💼</div>
+                  <div className="text-3xl flex-shrink-0">≡ƒÆ╝</div>
                   <div>
                     <h3 className="text-[#374851] font-medium mb-2 tracking-wide">Local Employment</h3>
                     <p className="text-[#929ea6] text-sm leading-relaxed">Prioritizing local hiring and supplier partnerships to strengthen regional economies and create sustainable livelihoods.</p>

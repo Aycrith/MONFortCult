@@ -1,0 +1,30 @@
+[
+  {
+    "tone": "dawn",
+    "reached": 0.04104,
+    "overlayBg": null,
+    "vignetteBg": null,
+    "shotPath": "C:\\Users\\camer\\Desktop\\JulesLandingPage\\MONFortCult\\debugscreenshot\\forest-dawn-p0.94.png"
+  },
+  {
+    "tone": "day",
+    "reached": 0.04104,
+    "overlayBg": null,
+    "vignetteBg": null,
+    "shotPath": "C:\\Users\\camer\\Desktop\\JulesLandingPage\\MONFortCult\\debugscreenshot\\forest-day-p0.94.png"
+  },
+  {
+    "tone": "dusk",
+    "reached": 0.04104,
+    "overlayBg": null,
+    "vignetteBg": null,
+    "shotPath": "C:\\Users\\camer\\Desktop\\JulesLandingPage\\MONFortCult\\debugscreenshot\\forest-dusk-p0.94.png"
+  },
+  {
+    "tone": "night",
+    "reached": 0.04104,
+    "overlayBg": null,
+    "vignetteBg": null,
+    "shotPath": "C:\\Users\\camer\\Desktop\\JulesLandingPage\\MONFortCult\\debugscreenshot\\forest-night-p0.94.png"
+  }
+]
