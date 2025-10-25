@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
+import { gsap } from 'gsap';
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -23,6 +24,7 @@ interface PersistentBackgroundProps {
   shipBlend: number;
   globeBlend: number;
   forestBlend: number;
+  reducedMotion?: boolean;
 }
 
 type ToneConfig = {
@@ -250,12 +252,128 @@ export default function PersistentBackground({
   shipBlend,
   globeBlend,
   forestBlend,
+  reducedMotion,
 }: PersistentBackgroundProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const clockRef = useRef(new THREE.Clock());
+
+  const heroLoopStateRef = useRef({
+    camX: 0,
+    camY: 0,
+    camZ: 0,
+    lookX: 0,
+    lookY: 0,
+    lookZ: 0,
+    rotation: 0,
+  });
+  const heroLoopTimelineRef = useRef<gsap.core.Timeline | null>(null);
+  const pointerTargetsRef = useRef({ x: 0, y: 0 });
+  const pointerCurrentRef = useRef({ x: 0, y: 0 });
+  const reducedMotionRef = useRef(reducedMotion);
+  const tempVecA = useMemo(() => new THREE.Vector3(), []);
+  const tempVecB = useMemo(() => new THREE.Vector3(), []);
+
+  useEffect(() => {
+    reducedMotionRef.current = reducedMotion;
+    if (reducedMotion) {
+      const pointerTarget = pointerTargetsRef.current;
+      const pointerCurrent = pointerCurrentRef.current;
+      pointerTarget.x = 0;
+      pointerTarget.y = 0;
+      pointerCurrent.x = 0;
+      pointerCurrent.y = 0;
+      const heroLoopState = heroLoopStateRef.current;
+      heroLoopState.camX = 0;
+      heroLoopState.camY = 0;
+      heroLoopState.camZ = 0;
+      heroLoopState.lookX = 0;
+      heroLoopState.lookY = 0;
+      heroLoopState.lookZ = 0;
+      heroLoopState.rotation = 0;
+      heroLoopTimelineRef.current?.pause(0);
+    }
+  }, [reducedMotion]);
+
+  useEffect(() => {
+    heroLoopTimelineRef.current?.kill();
+    heroLoopTimelineRef.current = null;
+
+    const heroLoopState = heroLoopStateRef.current;
+    heroLoopState.camX = 0;
+    heroLoopState.camY = 0;
+    heroLoopState.camZ = 0;
+    heroLoopState.lookX = 0;
+    heroLoopState.lookY = 0;
+    heroLoopState.lookZ = 0;
+    heroLoopState.rotation = 0;
+
+    if (reducedMotion) {
+      return () => undefined;
+    }
+
+    const timeline = gsap.timeline({ repeat: -1, defaults: { ease: 'sine.inOut' } });
+    timeline
+      .to(heroLoopState, {
+        camX: 1.4,
+        camY: 0.65,
+        camZ: -1.2,
+        lookX: -0.48,
+        lookY: 0.3,
+        lookZ: -0.6,
+        rotation: 0.08,
+        duration: 7.5,
+      })
+      .to(heroLoopState, {
+        camX: -1.2,
+        camY: -0.55,
+        camZ: 1.05,
+        lookX: 0.42,
+        lookY: -0.26,
+        lookZ: 0.55,
+        rotation: -0.09,
+        duration: 7.5,
+      });
+
+    heroLoopTimelineRef.current = timeline;
+
+    return () => {
+      timeline.kill();
+      heroLoopTimelineRef.current = null;
+    };
+  }, [reducedMotion]);
+
+  useEffect(() => {
+    if (reducedMotion) {
+      return () => undefined;
+    }
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const { innerWidth, innerHeight } = window;
+      if (!innerWidth || !innerHeight) {
+        return;
+      }
+      const normalizedX = (event.clientX / innerWidth - 0.5) * 2;
+      const normalizedY = (event.clientY / innerHeight - 0.5) * 2;
+      pointerTargetsRef.current.x = normalizedX;
+      pointerTargetsRef.current.y = normalizedY;
+    };
+
+    const resetPointer = () => {
+      pointerTargetsRef.current.x = 0;
+      pointerTargetsRef.current.y = 0;
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerleave", resetPointer);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerleave", resetPointer);
+    };
+  }, [reducedMotion]);
 
 const mountainMaterialRef = useRef<THREE.MeshStandardMaterial[]>([]);
 const mountainFallbackRef = useRef<THREE.Group | null>(null);
@@ -281,7 +399,7 @@ const shipGroupRef = useRef<THREE.Group | null>(null);
 const globeGroupRef = useRef<THREE.Group | null>(null);
 const forestGroupRef = useRef<THREE.Group | null>(null);
 
-const overlayRef = useRef<HTMLDivElement | null>(null);
+  const overlayRef = useRef<HTMLDivElement | null>(null);
 
   const targetsRef = useRef({
     cameraPosition: new THREE.Vector3(0, 12, 72),
@@ -953,6 +1071,14 @@ const overlayRef = useRef<HTMLDivElement | null>(null);
       const state = stateRef.current;
       const targets = targetsRef.current;
 
+      if (!reducedMotionRef.current) {
+        pointerCurrentRef.current.x = THREE.MathUtils.lerp(pointerCurrentRef.current.x, pointerTargetsRef.current.x, 0.06);
+        pointerCurrentRef.current.y = THREE.MathUtils.lerp(pointerCurrentRef.current.y, pointerTargetsRef.current.y, 0.06);
+      } else {
+        pointerCurrentRef.current.x = 0;
+        pointerCurrentRef.current.y = 0;
+      }
+
       state.cameraPosition.lerp(targets.cameraPosition, 0.065);
       state.cameraLookAt.lerp(targets.cameraLookAt, 0.065);
       state.cameraFov = THREE.MathUtils.lerp(state.cameraFov, targets.cameraFov, 0.08);
@@ -1265,13 +1391,37 @@ const overlayRef = useRef<HTMLDivElement | null>(null);
     targets.cameraFov = forestFov;
     targets.heroProgress = heroProgress;
 
+    let heroRotationOffset = 0;
+
+    if (!reducedMotion) {
+      const heroLoopStrength = Math.max(0, 1 - heroProgress);
+      if (heroLoopStrength > 0.0001) {
+        const heroLoopState = heroLoopStateRef.current;
+        tempVecA
+          .set(heroLoopState.camX, heroLoopState.camY, heroLoopState.camZ)
+          .multiplyScalar(heroLoopStrength * 0.85);
+        tempVecB
+          .set(heroLoopState.lookX, heroLoopState.lookY, heroLoopState.lookZ)
+          .multiplyScalar(heroLoopStrength * 0.72);
+        targets.cameraPosition.add(tempVecA);
+        targets.cameraLookAt.add(tempVecB);
+        heroRotationOffset = heroLoopState.rotation * heroLoopStrength;
+
+        const pointer = pointerCurrentRef.current;
+        targets.cameraPosition.x += pointer.x * heroLoopStrength * 2.4;
+        targets.cameraPosition.y += pointer.y * heroLoopStrength * 1.4;
+        targets.cameraLookAt.x += pointer.x * heroLoopStrength * 1.1;
+        targets.cameraLookAt.y += pointer.y * heroLoopStrength * 0.6;
+      }
+    }
+
     const mountainRotation =
       -Math.PI / 12 +
       heroProgress * 0.18 +
       morphProgress * 0.4 -
       infoProgress * 0.2 -
       shipSceneProgress * 0.1;
-    targets.mountainRotation = mountainRotation;
+    targets.mountainRotation = mountainRotation + heroRotationOffset;
 
     const morphBlend = clamp01(islandBlend);
     const infoFade =
@@ -1290,7 +1440,7 @@ const overlayRef = useRef<HTMLDivElement | null>(null);
 
     targets.globeOpacity = clamp01(globeBlend * 1.4);
     targets.forestOpacity = clamp01(forestBlend * 1.5);
-  }, [progress, islandBlend, shipBlend, globeBlend, forestBlend]);
+  }, [progress, islandBlend, shipBlend, globeBlend, forestBlend, reducedMotion, tempVecA, tempVecB]);
 
   // ✨ CRITICAL FIX: Calculate container opacity to fade out mountain during later scenes
   const containerOpacity = useMemo(() => {

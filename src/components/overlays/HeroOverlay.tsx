@@ -95,7 +95,7 @@ export default function HeroOverlay({ progress, opacity, onOpenControls, tone }:
         </div>
       </div>
 
-      <div className="absolute top-10 right-10 flex items-center gap-4" style={{ pointerEvents: "auto" }}>
+      <div className="absolute top-10 right-10 flex items-center gap-4">
         <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 text-white text-xs tracking-[0.5em] uppercase border border-white/20 backdrop-blur">
           <span>{toneLabelMap[tone]}</span>
         </div>
@@ -140,7 +140,7 @@ export default function HeroOverlay({ progress, opacity, onOpenControls, tone }:
           >
             N
           </text>
-          <path d="M20 20 L18 12 L20 10 L22 12 Z" fill="#6194b0" opacity="0.9" />
+          <path d="M20 20 L18 12 L20 10 L22 12 Z" fill="#82b3c9" opacity="0.9" />
           <path d="M20 20 L18 28 L20 30 L22 28 Z" fill="white" opacity="0.6" />
           <circle cx="20" cy="20" r="2" fill="white" />
         </svg>

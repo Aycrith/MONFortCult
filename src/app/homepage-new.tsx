@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import WebGLMountainScene from '@/components/WebGLMountainScene';
 import TextMorphScene from '@/components/scenes/TextMorphScene';
@@ -14,6 +14,8 @@ import MasterScrollContainer, {
 } from '@/components/MasterScrollContainer';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion';
+import { useAdaptiveSoundscape } from '@/hooks/useAdaptiveSoundscape';
 
 /**
  * Homepage - Rebuilt with Persistent Canvas Architecture
@@ -34,6 +36,47 @@ import Footer from '@/components/Footer';
 export default function Homepage() {
   const heroRef = useRef<HTMLDivElement>(null);
   const logoRef = useRef<HTMLDivElement>(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const AUTOPLAY_NOTICE = 'Tap anywhere on the experience to unlock audio.';
+  const [soundscapeEnabled, setSoundscapeEnabled] = useState(!prefersReducedMotion);
+  const [soundNotice, setSoundNotice] = useState<string | null>(null);
+  const { updateProgress: updateSoundscape, isAutoplayBlocked } = useAdaptiveSoundscape({
+    enabled: soundscapeEnabled && !prefersReducedMotion,
+    onBlocked: () => setSoundNotice(AUTOPLAY_NOTICE),
+  });
+
+  useEffect(() => {
+    if (prefersReducedMotion) {
+      setSoundscapeEnabled(false);
+      setSoundNotice('Audio disabled to honor reduced-motion preference.');
+    }
+  }, [prefersReducedMotion]);
+
+  useEffect(() => {
+    if (!isAutoplayBlocked) {
+      setSoundNotice((current) => (current === AUTOPLAY_NOTICE ? null : current));
+    }
+  }, [isAutoplayBlocked]);
+
+  useEffect(() => {
+    if (soundscapeEnabled && !prefersReducedMotion && !isAutoplayBlocked) {
+      setSoundNotice(null);
+    }
+  }, [soundscapeEnabled, prefersReducedMotion, isAutoplayBlocked]);
+
+  const handleSoundToggle = () => {
+    if (prefersReducedMotion) {
+      setSoundNotice('Audio disabled to honor reduced-motion preference.');
+      return;
+    }
+    setSoundscapeEnabled((value) => {
+      const next = !value;
+      if (!next) {
+        setSoundNotice(null);
+      }
+      return next;
+    });
+  };
 
   // Hero fade-in animation (runs once on mount)
   useEffect(() => {
@@ -142,6 +185,13 @@ export default function Homepage() {
           // Calculate mountain camera progress (zoom out during hero scene)
           const mountainProgress = heroProgress ?? 0;
 
+          updateSoundscape({
+            global: globalProgress,
+            hero: heroProgress ?? 0,
+            ship: shipProgress ?? 0,
+            forest: forestProgress ?? 0,
+          });
+
           return (
             <>
               {/* ============ CANVAS LAYER (z-index: 0) ============ */}
@@ -153,6 +203,10 @@ export default function Homepage() {
                   progress={mountainProgress}
                   opacity={mountainsOpacity}
                   isVisible={mountainsVisible}
+                  soundEnabled={soundscapeEnabled && !prefersReducedMotion}
+                  onSoundToggle={handleSoundToggle}
+                  soundNotice={soundNotice}
+                  soundLocked={prefersReducedMotion}
                 >
                   {/* Hero Content Overlay - Only visible during hero scene */}
                   {heroProgress !== null && (
@@ -293,6 +347,7 @@ export default function Homepage() {
                   progress={shipProgress}
                   opacity={shipOpacity}
                   isVisible={shipProgress !== null}
+                  reducedMotion={prefersReducedMotion}
                 />
               )}
 

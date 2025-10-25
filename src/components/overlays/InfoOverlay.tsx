@@ -115,7 +115,7 @@ export default function InfoOverlay({ progress, opacity, isVisible }: InfoOverla
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-12">
             {stats.map((item) => (
               <div key={item.label} className="text-center">
-                <span className="block text-[40px] md:text-[48px] text-[#6194b0] font-light mb-2">
+                <span className="block text-[40px] md:text-[48px] text-[#82b3c9] font-light mb-2">
                   {item.value}
                 </span>
                 <span className="text-[11px] tracking-[0.38em] uppercase text-[#819097]">{item.label}</span>
@@ -151,7 +151,7 @@ export default function InfoOverlay({ progress, opacity, isVisible }: InfoOverla
                 <p className="text-[#6d7a81] leading-7 text-sm mb-5">{division.copy}</p>
                 <div className="flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.32em] text-[#7d8c95]">
                   {division.tags.map((tag) => (
-                    <span key={tag} className="px-3 py-1 rounded-full bg-[#6194b0]/12 border border-[#6194b0]/30">
+                    <span key={tag} className="px-3 py-1 rounded-full bg-[#82b3c9]/12 border border-[#82b3c9]/30">
                       {tag}
                     </span>
                   ))}
@@ -194,7 +194,7 @@ export default function InfoOverlay({ progress, opacity, isVisible }: InfoOverla
                   "Operational continuity with 24/7 control rooms across three continents.",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3">
-                    <span className="mt-1 block w-1.5 h-1.5 rounded-full bg-[#6194b0]" />
+                    <span className="mt-1 block w-1.5 h-1.5 rounded-full bg-[#82b3c9]" />
                     {item}
                   </li>
                 ))}
@@ -209,7 +209,7 @@ export default function InfoOverlay({ progress, opacity, isVisible }: InfoOverla
                   "Collaborative teams that embed partner goals into long-term strategies.",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3">
-                    <span className="mt-1 block w-1.5 h-1.5 rounded-full bg-[#6194b0]" />
+                    <span className="mt-1 block w-1.5 h-1.5 rounded-full bg-[#82b3c9]" />
                     {item}
                   </li>
                 ))}

@@ -13,6 +13,10 @@ interface MenuPanelProps {
   snowEnabled: boolean;
   onSnowToggle: () => void;
   onCinematicTour: () => void;
+  soundEnabled: boolean;
+  onSoundToggle: () => void;
+  soundNotice: string | null;
+  soundLocked: boolean;
 }
 
 const toneLabels: Record<SceneTone, string> = {
@@ -30,6 +34,10 @@ export default function MenuPanel({
   snowEnabled,
   onSnowToggle,
   onCinematicTour,
+  soundEnabled,
+  onSoundToggle,
+  soundNotice,
+  soundLocked,
 }: MenuPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -119,6 +127,29 @@ export default function MenuPanel({
               <span>Snow Overlay</span>
               <span>{snowEnabled ? 'ON' : 'OFF'}</span>
             </button>
+          </section>
+
+          <section>
+            <h3 className="text-[11px] tracking-[0.5em] uppercase text-white/50 mb-4">
+              Adaptive Soundscape
+            </h3>
+            <button
+              onClick={onSoundToggle}
+              disabled={soundLocked}
+              className={`w-full py-3 rounded-md text-xs tracking-[0.45em] uppercase flex items-center justify-between transition-colors ${
+                soundEnabled
+                  ? 'bg-[#8bd6ff] text-[#082038] shadow-[0_12px_30px_rgba(139,214,255,0.25)]'
+                  : 'bg-white/10 text-white/70 hover:bg-white/18 hover:text-white'
+              } ${soundLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <span>Soundscape</span>
+              <span>{soundEnabled ? 'ON' : 'OFF'}</span>
+            </button>
+            {soundNotice && (
+              <p className="text-[11px] text-white/55 leading-relaxed mt-3">
+                {soundNotice}
+              </p>
+            )}
           </section>
 
           <section>

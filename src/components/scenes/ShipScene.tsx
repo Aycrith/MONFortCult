@@ -16,6 +16,7 @@ interface ShipSceneProps {
   progress: number;
   opacity: number;
   isVisible: boolean;
+  reducedMotion: boolean;
 }
 
 type FocusFrame = {
@@ -37,6 +38,7 @@ type LightingRig = {
 };
 
 const MODEL_PATH = '/assets/3dmodel/Engine/v8_motorbike_engine_optimized.glb';
+const SPARK_COUNT = 1200;
 
 const FOCUS_FRAMES: FocusFrame[] = [
   {
@@ -147,7 +149,7 @@ const buildLighting = (scene: THREE.Scene): LightingRig => {
   return { key, rim, fill, kicker, accent, floor };
 };
 
-export default function ShipScene({ progress, opacity, isVisible }: ShipSceneProps) {
+export default function ShipScene({ progress, opacity, isVisible, reducedMotion }: ShipSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -157,6 +159,13 @@ export default function ShipScene({ progress, opacity, isVisible }: ShipScenePro
 
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
   const animationDurationRef = useRef(1);
+  const engineRootRef = useRef<THREE.Group | null>(null);
+
+  // Pointer orbit override
+  // pointer orbit override handled by manualControlRef (below)
+
+  // Sparks particle system
+  const sparkStatesRef = useRef<{ velocity: THREE.Vector3; life: number }[]>([]);
 
   const composerRef = useRef<EffectComposer | null>(null);
   const bloomPassRef = useRef<UnrealBloomPass | null>(null);
@@ -167,6 +176,19 @@ export default function ShipScene({ progress, opacity, isVisible }: ShipScenePro
   const clockRef = useRef(new THREE.Clock());
   const progressRef = useRef(progress);
   const smoothedProgressRef = useRef(progress);
+  const sparkMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
+  const sparkPointsRef = useRef<THREE.Points | null>(null);
+  const manualControlRef = useRef({
+    active: false,
+    pointerId: null as number | null,
+    lastX: 0,
+    lastY: 0,
+    yaw: 0,
+    pitch: 0,
+    targetYaw: 0,
+    targetPitch: 0,
+  });
+  const reducedMotionRef = useRef(reducedMotion);
 
   const [isLoaded, setIsLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -174,6 +196,13 @@ export default function ShipScene({ progress, opacity, isVisible }: ShipScenePro
   useEffect(() => {
     progressRef.current = progress;
   }, [progress]);
+
+  useEffect(() => {
+    reducedMotionRef.current = reducedMotion;
+    if (sparkMaterialRef.current) {
+      sparkMaterialRef.current.uniforms.uMotionScale.value = reducedMotion ? 0 : 1;
+    }
+  }, [reducedMotion]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -223,6 +252,114 @@ export default function ShipScene({ progress, opacity, isVisible }: ShipScenePro
     const lightingRig = buildLighting(scene);
     lightingRigRef.current = lightingRig;
 
+    const sparkGeometry = new THREE.BufferGeometry();
+    const basePositions = new Float32Array(SPARK_COUNT * 3);
+    const offsets = new Float32Array(SPARK_COUNT * 3);
+    const seeds = new Float32Array(SPARK_COUNT);
+    const phases = new Float32Array(SPARK_COUNT);
+    const lives = new Float32Array(SPARK_COUNT);
+
+    for (let i = 0; i < SPARK_COUNT; i += 1) {
+      const i3 = i * 3;
+      basePositions[i3] = 0;
+      basePositions[i3 + 1] = 0;
+      basePositions[i3 + 2] = 0;
+
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 0.3 + Math.random() * 0.65;
+      offsets[i3] = Math.cos(angle) * radius;
+      offsets[i3 + 1] = Math.random() * 0.32 + 0.35;
+      offsets[i3 + 2] = Math.sin(angle) * radius;
+      seeds[i] = Math.random();
+      phases[i] = Math.random();
+      lives[i] = Math.random();
+    }
+
+    sparkGeometry.setAttribute('position', new THREE.Float32BufferAttribute(basePositions, 3));
+    sparkGeometry.setAttribute('aOffset', new THREE.Float32BufferAttribute(offsets, 3));
+    sparkGeometry.setAttribute('aSeed', new THREE.Float32BufferAttribute(seeds, 1));
+    sparkGeometry.setAttribute('aPhase', new THREE.Float32BufferAttribute(phases, 1));
+    sparkGeometry.setAttribute('aLife', new THREE.Float32BufferAttribute(lives, 1));
+
+    const sparkVertexShader = /* glsl */ `
+      precision mediump float;
+      uniform float uTime;
+      uniform float uScroll;
+      uniform float uMotionScale;
+      uniform float uInteraction;
+      attribute vec3 aOffset;
+      attribute float aSeed;
+      attribute float aPhase;
+      attribute float aLife;
+      varying float vAlpha;
+      varying float vGlow;
+
+      void main() {
+        float motion = clamp(uMotionScale, 0.0, 1.0);
+        float loopT = fract(uTime * (0.45 + aSeed * 0.25) + aPhase);
+        float travel = pow(loopT, 0.6);
+        vec3 offset = aOffset;
+        offset.y += travel * (1.2 + aLife * 1.6) * (0.6 + uScroll * 0.7);
+        offset.x += sin(loopT * 6.28318 + aSeed * 9.7) * (0.08 + aLife * 0.15) * (0.65 + motion * 0.9);
+        offset.z += cos(loopT * 6.28318 + aSeed * 8.1) * (0.05 + aLife * 0.12) * (0.65 + motion * 0.9);
+        offset.y += uInteraction * 0.25;
+
+        vec4 mvPosition = modelViewMatrix * vec4(offset, 1.0);
+        gl_Position = projectionMatrix * mvPosition;
+
+        float sizeBase = mix(3.5, 10.0, aLife);
+        float interactionBoost = mix(1.0, 1.6, clamp(uInteraction, 0.0, 1.0));
+        gl_PointSize = sizeBase * interactionBoost * (1.0 / -mvPosition.z);
+
+        vAlpha = (1.0 - loopT) * (0.6 + uScroll * 0.4);
+        vGlow = aLife;
+      }
+    `;
+
+    const sparkFragmentShader = /* glsl */ `
+      precision mediump float;
+      uniform float uMotionScale;
+      uniform float uInteraction;
+      varying float vAlpha;
+      varying float vGlow;
+
+      void main() {
+        vec2 uv = gl_PointCoord - vec2(0.5);
+        float dist = length(uv);
+        float falloff = smoothstep(0.5, 0.0, dist);
+        float inner = smoothstep(0.25, 0.0, dist);
+        vec3 cold = vec3(0.96, 0.58, 0.26);
+        vec3 hot = vec3(1.0, 0.86, 0.6);
+        float motionTint = mix(0.12, 0.45, clamp(uMotionScale, 0.0, 1.0));
+        vec3 color = mix(cold, hot, vGlow) + motionTint * inner;
+        float alpha = falloff * vAlpha;
+        if (alpha <= 0.001) discard;
+        float interaction = mix(0.6, 1.0, clamp(uInteraction, 0.0, 1.0));
+        gl_FragColor = vec4(color * (0.6 + inner * 0.6) * interaction, alpha);
+      }
+    `;
+
+    const sparkMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uScroll: { value: 0 },
+        uMotionScale: { value: reducedMotionRef.current ? 0 : 1 },
+        uInteraction: { value: 0 },
+      },
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      vertexShader: sparkVertexShader,
+      fragmentShader: sparkFragmentShader,
+    });
+
+    const sparkPoints = new THREE.Points(sparkGeometry, sparkMaterial);
+    sparkPoints.position.set(0.35, 0.6, 0);
+    sparkPoints.renderOrder = 3;
+    scene.add(sparkPoints);
+    sparkMaterialRef.current = sparkMaterial;
+    sparkPointsRef.current = sparkPoints;
+
     const loader = new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder);
 
@@ -232,6 +369,7 @@ export default function ShipScene({ progress, opacity, isVisible }: ShipScenePro
         const engineRoot = new THREE.Group();
         engineRoot.position.set(0, 0, 0);
         engineRoot.scale.setScalar(1.0);
+        engineRootRef.current = engineRoot;
 
         gltf.scene.traverse((child) => {
           if ((child as THREE.Mesh).isMesh) {
@@ -255,6 +393,8 @@ export default function ShipScene({ progress, opacity, isVisible }: ShipScenePro
         const idleTimeline = gsap.timeline({ repeat: -1, yoyo: true });
         idleTimeline.to(engineRoot.rotation, { y: '+=0.24', duration: 7.5, ease: 'sine.inOut' }, 0);
         idleTimeline.to(engineRoot.position, { y: '+=0.08', duration: 3.5, ease: 'sine.inOut' }, 0);
+
+        
 
         setIsLoaded(true);
       },
@@ -298,6 +438,10 @@ export default function ShipScene({ progress, opacity, isVisible }: ShipScenePro
       let orbitAngle: number;
       let height: number;
       let fov: number;
+      const motionScale = reducedMotionRef.current ? 0.35 : 1;
+      const manual = manualControlRef.current;
+      const manualYaw = manual.yaw;
+      const manualPitch = manual.pitch;
 
       if (progressValue < 0.3) {
         const phase = progressValue / 0.3;
@@ -320,25 +464,34 @@ export default function ShipScene({ progress, opacity, isVisible }: ShipScenePro
         fov = THREE.MathUtils.lerp(38.5, 36.8, phase);
       }
 
+      orbitAngle += manualYaw * 0.55;
+      height += manualPitch * 1.4;
+      orbitRadius += manualPitch * -0.35;
+
       cameraRef.current.fov = fov;
       cameraRef.current.updateProjectionMatrix();
 
       const baseX = Math.cos(orbitAngle) * orbitRadius;
       const baseZ = Math.sin(orbitAngle) * orbitRadius;
-      const driftX = Math.sin(elapsed * 0.24) * 0.07;
-      const driftY = Math.cos(elapsed * 0.2) * 0.05;
-      const driftZ = Math.sin(elapsed * 0.18) * 0.06;
+      const driftX = Math.sin(elapsed * 0.24) * 0.07 * motionScale;
+      const driftY = Math.cos(elapsed * 0.2) * 0.05 * motionScale;
+      const driftZ = Math.sin(elapsed * 0.18) * 0.06 * motionScale;
       cameraRef.current.position.set(baseX + driftX, height + driftY, baseZ + driftZ);
 
       const focusState = focusForProgress(progressValue);
       tmpTarget.copy(focusState.target);
-      tmpTarget.x += Math.sin(elapsed * 0.24) * 0.014;
-      tmpTarget.y += Math.sin(elapsed * 0.28) * 0.02;
+      tmpTarget.x += Math.sin(elapsed * 0.24) * 0.014 * motionScale + manualYaw * 0.25;
+      tmpTarget.y += Math.sin(elapsed * 0.28) * 0.02 * motionScale + manualPitch * 0.4;
 
       tmpForward.subVectors(tmpTarget, cameraRef.current.position).normalize();
       tmpMatrix.lookAt(cameraRef.current.position, tmpTarget, baseUp);
       baseQuaternion.setFromRotationMatrix(tmpMatrix);
-      rollQuaternion.setFromAxisAngle(tmpForward, focusState.roll + Math.sin(elapsed * 0.16) * THREE.MathUtils.degToRad(0.7));
+      rollQuaternion.setFromAxisAngle(
+        tmpForward,
+        focusState.roll +
+          Math.sin(elapsed * 0.16) * THREE.MathUtils.degToRad(0.7) * motionScale +
+          manualYaw * THREE.MathUtils.degToRad(2.5)
+      );
       cameraRef.current.quaternion.copy(baseQuaternion).multiply(rollQuaternion);
       cameraRef.current.updateMatrixWorld(true);
       return focusState;
@@ -352,26 +505,40 @@ export default function ShipScene({ progress, opacity, isVisible }: ShipScenePro
       const targetProgress = THREE.MathUtils.clamp(progressRef.current, 0, 1);
       smoothedProgressRef.current = THREE.MathUtils.lerp(smoothedProgressRef.current, targetProgress, 0.18);
 
+      const manual = manualControlRef.current;
+      if (!manual.active) {
+        manual.targetYaw *= 0.92;
+        manual.targetPitch *= 0.88;
+      }
+      manual.yaw = THREE.MathUtils.lerp(manual.yaw, manual.targetYaw, manual.active ? 0.22 : 0.12);
+      manual.pitch = THREE.MathUtils.lerp(manual.pitch, manual.targetPitch, manual.active ? 0.22 : 0.12);
+      if (reducedMotionRef.current) {
+        manual.yaw = THREE.MathUtils.clamp(manual.yaw, -0.8, 0.8);
+        manual.pitch = THREE.MathUtils.clamp(manual.pitch, -0.5, 0.5);
+      }
+
       const focusState = updateCamera(smoothedProgressRef.current, cameraClock.value);
 
       if (rendererRef.current) {
+        const motionMultiplier = reducedMotionRef.current ? 0.85 : 1;
         const targetExposure = prefersLowPerf
           ? THREE.MathUtils.lerp(0.56, 0.76, smoothedProgressRef.current)
           : THREE.MathUtils.lerp(0.6, 0.86, smoothedProgressRef.current);
         rendererRef.current.toneMappingExposure = THREE.MathUtils.lerp(
           rendererRef.current.toneMappingExposure,
-          targetExposure,
+          targetExposure * motionMultiplier,
           0.06
         );
       }
 
       if (bloomPassRef.current) {
+        const motionMultiplier = reducedMotionRef.current ? 0.6 : 1;
         const bloomTarget = prefersLowPerf
           ? THREE.MathUtils.lerp(0.22, 0.34, smoothedProgressRef.current)
           : THREE.MathUtils.lerp(0.28, 0.4, smoothedProgressRef.current);
         bloomPassRef.current.strength = THREE.MathUtils.lerp(
           bloomPassRef.current.strength,
-          bloomTarget,
+          bloomTarget * motionMultiplier,
           0.08
         );
       }
@@ -379,12 +546,14 @@ export default function ShipScene({ progress, opacity, isVisible }: ShipScenePro
       if (bokehPassRef.current) {
         const uniforms = bokehPassRef.current.materialBokeh.uniforms;
         uniforms.focus.value = THREE.MathUtils.lerp(uniforms.focus.value, focusState.focus, 0.08);
-        uniforms.aperture.value = THREE.MathUtils.lerp(uniforms.aperture.value, focusState.aperture, 0.1);
+        const targetAperture = reducedMotionRef.current ? focusState.aperture * 0.7 : focusState.aperture;
+        uniforms.aperture.value = THREE.MathUtils.lerp(uniforms.aperture.value, targetAperture, 0.1);
       }
 
       if (lightingRigRef.current) {
         const { key, rim, fill, kicker, accent, floor } = lightingRigRef.current;
-        const boost = focusState.lightBoost;
+        const manualBoost = Math.min(0.4, Math.abs(manual.yaw) * 0.3 + Math.abs(manual.pitch) * 0.2);
+        const boost = focusState.lightBoost + manualBoost;
 
         key.intensity = THREE.MathUtils.lerp(key.intensity, 1.05 + boost * 0.55, 0.07);
         rim.intensity = THREE.MathUtils.lerp(rim.intensity, 0.72 + boost * 0.28, 0.07);
@@ -401,6 +570,14 @@ export default function ShipScene({ progress, opacity, isVisible }: ShipScenePro
           0.1 + boost * 0.2,
           0.06
         );
+      }
+
+      if (sparkMaterialRef.current) {
+        const uniforms = sparkMaterialRef.current.uniforms;
+        uniforms.uTime.value += delta * (reducedMotionRef.current ? 0.45 : 1.0);
+        uniforms.uScroll.value = THREE.MathUtils.lerp(uniforms.uScroll.value, smoothedProgressRef.current, 0.1);
+        const interactionLevel = Math.min(1, Math.abs(manual.yaw) + Math.abs(manual.pitch));
+        uniforms.uInteraction.value = THREE.MathUtils.lerp(uniforms.uInteraction.value, interactionLevel, 0.12);
       }
 
       if (containerRef.current) {
@@ -469,6 +646,19 @@ export default function ShipScene({ progress, opacity, isVisible }: ShipScenePro
         sceneRef.current.clear();
       }
 
+      if (sparkPointsRef.current) {
+        sceneRef.current?.remove(sparkPointsRef.current);
+        sparkPointsRef.current.geometry.dispose();
+        const material = sparkPointsRef.current.material;
+        if (Array.isArray(material)) {
+          material.forEach((mat) => mat && 'dispose' in mat && (mat as THREE.Material).dispose());
+        } else if (material && 'dispose' in material) {
+          (material as THREE.Material).dispose();
+        }
+        sparkPointsRef.current = null;
+      }
+      sparkMaterialRef.current = null;
+
       envTarget.dispose();
       pmrem.dispose();
 
@@ -482,6 +672,70 @@ export default function ShipScene({ progress, opacity, isVisible }: ShipScenePro
       mixerRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element || reducedMotion) {
+      return undefined;
+    }
+
+    const manual = manualControlRef.current;
+    const previousTouchAction = element.style.touchAction;
+    element.style.touchAction = 'none';
+    element.style.cursor = 'grab';
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!event.isPrimary || manual.active) {
+        return;
+      }
+      manual.active = true;
+      manual.pointerId = event.pointerId;
+      manual.lastX = event.clientX;
+      manual.lastY = event.clientY;
+      element.setPointerCapture(event.pointerId);
+      element.style.cursor = 'grabbing';
+    };
+
+    const handlePointerMove = (event: PointerEvent) => {
+      if (!manual.active || manual.pointerId !== event.pointerId) {
+        return;
+      }
+      const dx = (event.clientX - manual.lastX) / Math.max(window.innerWidth, 1);
+      const dy = (event.clientY - manual.lastY) / Math.max(window.innerHeight, 1);
+      manual.lastX = event.clientX;
+      manual.lastY = event.clientY;
+      manual.targetYaw = THREE.MathUtils.clamp(manual.targetYaw + dx * 4.5, -1.4, 1.4);
+      manual.targetPitch = THREE.MathUtils.clamp(manual.targetPitch + dy * 3.2, -0.9, 0.9);
+    };
+
+    const releasePointer = (event: PointerEvent) => {
+      if (manual.pointerId !== event.pointerId) {
+        return;
+      }
+      manual.active = false;
+      manual.pointerId = null;
+      manual.lastX = 0;
+      manual.lastY = 0;
+      manual.targetYaw *= 0.5;
+      manual.targetPitch *= 0.5;
+      element.releasePointerCapture(event.pointerId);
+      element.style.cursor = 'grab';
+    };
+
+    element.addEventListener('pointerdown', handlePointerDown);
+    element.addEventListener('pointermove', handlePointerMove);
+    element.addEventListener('pointerup', releasePointer);
+    element.addEventListener('pointercancel', releasePointer);
+
+    return () => {
+      element.style.touchAction = previousTouchAction;
+      element.style.cursor = '';
+      element.removeEventListener('pointerdown', handlePointerDown);
+      element.removeEventListener('pointermove', handlePointerMove);
+      element.removeEventListener('pointerup', releasePointer);
+      element.removeEventListener('pointercancel', releasePointer);
+    };
+  }, [reducedMotion]);
 
   return (
     <div

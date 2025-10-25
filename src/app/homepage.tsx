@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import MasterScrollContainer, {
   SCENE_TIMING,
   getSceneOpacity,
@@ -23,6 +23,8 @@ import DevTimelineHud from '@/components/DevTimelineHud';
 import AtmosphereOverlay from '@/components/overlays/AtmosphereOverlay';
 import CloudOverlay from '@/components/CloudOverlay';
 import { usePerformanceMonitor } from '@/hooks/usePerformanceMonitor';
+import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion';
+import { useAdaptiveSoundscape } from '@/hooks/useAdaptiveSoundscape';
 
 const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value));
 
@@ -56,8 +58,34 @@ export default function Homepage() {
   // Fixes whitewashed appearance with better contrast and atmospheric depth
   const [tone, setTone] = useState<SceneTone>('dusk');
   const [snowEnabled, setSnowEnabled] = useState(false);
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const [soundscapeEnabled, setSoundscapeEnabled] = useState(!prefersReducedMotion);
+  const [soundNotice, setSoundNotice] = useState<string | null>(null);
   const { menuOpen, setMenuOpen } = useMenu();
   const { lenis } = useScroll();
+  const { updateProgress: updateSoundscape, isAutoplayBlocked } = useAdaptiveSoundscape({
+    enabled: soundscapeEnabled && !prefersReducedMotion,
+    onBlocked: () => setSoundNotice('Tap anywhere on the experience to unlock audio.'),
+  });
+
+  useEffect(() => {
+    if (prefersReducedMotion) {
+      setSoundscapeEnabled(false);
+      setSoundNotice('Audio disabled to honor reduced-motion preference.');
+    }
+  }, [prefersReducedMotion]);
+
+  useEffect(() => {
+    if (!isAutoplayBlocked) {
+      setSoundNotice((current) => (current === 'Tap anywhere on the experience to unlock audio.' ? null : current));
+    }
+  }, [isAutoplayBlocked]);
+
+  useEffect(() => {
+    if (soundscapeEnabled && !prefersReducedMotion && !isAutoplayBlocked) {
+      setSoundNotice(null);
+    }
+  }, [soundscapeEnabled, prefersReducedMotion, isAutoplayBlocked]);
 
   const handleCinematicTour = () => {
     const target = document.documentElement.scrollHeight;
@@ -137,6 +165,13 @@ export default function Homepage() {
 
           const footerFade = forestProgress === null ? 0 : clamp((forestProgress - 0.88) / 0.12);
 
+          updateSoundscape({
+            global: globalProgress,
+            hero: heroProgress ?? 0,
+            ship: shipProgress ?? 0,
+            forest: forestProgress ?? 0,
+          });
+
           return (
             <div className="absolute inset-0">
               <DevTimelineHud progress={globalProgress} />
@@ -147,6 +182,7 @@ export default function Homepage() {
                 shipBlend={shipBlend}
                 globeBlend={globeBlend}
                 forestBlend={forestBlend}
+                reducedMotion={prefersReducedMotion}
               />
 
               <AtmosphereOverlay progress={globalProgress} />
@@ -167,6 +203,7 @@ export default function Homepage() {
                   progress={shipProgress}
                   opacity={shipOpacity}
                   isVisible={shipProgress !== null}
+                  reducedMotion={prefersReducedMotion}
                 />
               )}
 
@@ -185,7 +222,7 @@ export default function Homepage() {
                 style={{ opacity: clamp(footerFade), transition: 'opacity 0.4s ease', zIndex: 9 }}
               />
 
-              <div className="absolute inset-0" style={{ zIndex: 10 }}>
+              <div className="absolute inset-0" style={{ zIndex: 60 }}>
                 <HeroOverlay
                   progress={heroProgress}
                   opacity={heroOpacity}
@@ -212,6 +249,16 @@ export default function Homepage() {
                 snowEnabled={snowEnabled}
                 onSnowToggle={() => setSnowEnabled((value) => !value)}
                 onCinematicTour={handleCinematicTour}
+                soundEnabled={soundscapeEnabled && !prefersReducedMotion}
+                onSoundToggle={() => {
+                  if (prefersReducedMotion) {
+                    setSoundNotice('Audio disabled to honor reduced-motion preference.');
+                    return;
+                  }
+                  setSoundscapeEnabled((value) => !value);
+                }}
+                soundNotice={soundNotice}
+                soundLocked={prefersReducedMotion}
               />
             </div>
           );

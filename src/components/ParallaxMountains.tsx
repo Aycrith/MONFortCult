@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, ReactNode } from 'react';
+import { useEffect, useRef, ReactNode, useMemo } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import CloudOverlay from './CloudOverlay';
@@ -26,35 +26,38 @@ export default function ParallaxMountains({ children }: ParallaxMountainsProps) 
   const scrollProgressRef = useRef(0);
 
   // Define mountain layers (back to front)
-  const mountainLayers: MountainLayer[] = [
-    {
-      id: 'green-mountain',
-      src: '/assets/mountains/PNG-Green-Mountain.png',
-      speed: 0.3, // Slowest (farthest)
-      zIndex: 1,
-      scale: 0.8,
-      yPosition: '20%', // Lower in viewport
-      opacity: 0.7,
-    },
-    {
-      id: 'red-mountain',
-      src: '/assets/mountains/PNG-Red-Snowcap-Mountain.png',
-      speed: 0.6, // Medium
-      zIndex: 2,
-      scale: 1.0,
-      yPosition: '10%',
-      opacity: 0.85,
-    },
-    {
-      id: 'closerange-mountain',
-      src: '/assets/mountains/PNG-Mountain_CLOSERANGE. png.png',
-      speed: 1.0, // Fastest (closest)
-      zIndex: 3,
-      scale: 1.2,
-      yPosition: '0%',
-      opacity: 1.0,
-    },
-  ];
+  const mountainLayers = useMemo<MountainLayer[]>(
+    () => [
+      {
+        id: 'green-mountain',
+        src: '/assets/mountains/PNG-Green-Mountain.png',
+        speed: 0.3, // Slowest (farthest)
+        zIndex: 1,
+        scale: 0.8,
+        yPosition: '20%', // Lower in viewport
+        opacity: 0.7,
+      },
+      {
+        id: 'red-mountain',
+        src: '/assets/mountains/PNG-Red-Snowcap-Mountain.png',
+        speed: 0.6, // Medium
+        zIndex: 2,
+        scale: 1.0,
+        yPosition: '10%',
+        opacity: 0.85,
+      },
+      {
+        id: 'closerange-mountain',
+        src: '/assets/mountains/PNG-Mountain_CLOSERANGE. png.png',
+        speed: 1.0, // Fastest (closest)
+        zIndex: 3,
+        scale: 1.2,
+        yPosition: '0%',
+        opacity: 1.0,
+      },
+    ],
+    []
+  );
 
   // Setup parallax scroll effect
   useEffect(() => {
@@ -90,7 +93,7 @@ export default function ParallaxMountains({ children }: ParallaxMountainsProps) 
     return () => {
       scrollTrigger.kill();
     };
-  }, []);
+  }, [mountainLayers]);
 
   return (
     <>

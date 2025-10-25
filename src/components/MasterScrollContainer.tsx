@@ -41,6 +41,7 @@ export default function MasterScrollContainer({ children }: MasterScrollContaine
     }
   }, [currentProgress]);
 
+  // Adaptive ambient soundscape (starts suspended; resumes on user gesture)
   useEffect(() => {
     const sceneOrder: Array<keyof typeof SCENE_TIMING> = [
       'hero',
@@ -78,7 +79,7 @@ export default function MasterScrollContainer({ children }: MasterScrollContaine
     // Calculate total scroll distance based on reference video timing
     // Reference: 88 seconds total video = ~8000vh for comfortable, deliberate scroll pace
     // This creates ~90vh per second of content, preventing users from rushing through scenes
-    const TOTAL_SCROLL_HEIGHT = 8000;
+  const TOTAL_SCROLL_HEIGHT = 11500;
 
     // RAF-throttled progress update to prevent excessive re-renders
     const updateProgress = (progress: number) => {
@@ -101,7 +102,7 @@ export default function MasterScrollContainer({ children }: MasterScrollContaine
       start: 'top top',
       end: `+=${TOTAL_SCROLL_HEIGHT}vh`,
       pin: true, // This is the ONLY pin in the entire experience
-      scrub: 2.8, // Smooth scroll-linked animation (2.8s delay for cinematic smoothness)
+      scrub: 3.4, // Extended smoothing for more cinematic pacing
       anticipatePin: 1,
       invalidateOnRefresh: true,
       onUpdate: (self) => {
@@ -157,33 +158,33 @@ export default function MasterScrollContainer({ children }: MasterScrollContaine
 export const SCENE_TIMING = {
   hero: {
     start: 0,
-    end: 0.045,
-    duration: 0.045,
+    end: 0.12,
+    duration: 0.12,
   },
   textMorph: {
-    start: 0.045,
-    end: 0.24, // 0.045 + 0.195
-    duration: 0.195,
+    start: 0.12,
+    end: 0.34, // hero end + transitional arc
+    duration: 0.22,
   },
   infoSections: {
-    start: 0.24,
-    end: 0.61, // 0.24 + 0.37
-    duration: 0.37,
+    start: 0.34,
+    end: 0.68, // extended to slow the narrative content
+    duration: 0.34,
   },
   ship: {
-    start: 0.61,
-    end: 0.74, // 0.61 + 0.13
-    duration: 0.13,
-  },
-  globe: {
-    start: 0.74,
-    end: 0.88, // 0.74 + 0.14
+    start: 0.68,
+    end: 0.82, // longer dwell on ship reveal
     duration: 0.14,
   },
+  globe: {
+    start: 0.82,
+    end: 0.92, // smoother glide into globe
+    duration: 0.1,
+  },
   forest: {
-    start: 0.88,
-    end: 1.0, // 0.88 + 0.12
-    duration: 0.12,
+    start: 0.92,
+    end: 1.0, // lingering finale
+    duration: 0.08,
   },
 } as const;
 

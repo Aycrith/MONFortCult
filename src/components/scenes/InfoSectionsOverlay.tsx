@@ -107,19 +107,19 @@ export default function InfoSectionsOverlay({ progress, opacity, isVisible }: In
             {/* Key Statistics Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-16 mb-16">
               <div className="text-center">
-                <div className="text-4xl md:text-5xl font-light text-[#6194b0] mb-2">3</div>
+                <div className="text-4xl md:text-5xl font-light text-[#82b3c9] mb-2">3</div>
                 <div className="text-sm text-[#929ea6] tracking-wider uppercase">Global Hubs</div>
               </div>
               <div className="text-center">
-                <div className="text-4xl md:text-5xl font-light text-[#6194b0] mb-2">4</div>
+                <div className="text-4xl md:text-5xl font-light text-[#82b3c9] mb-2">4</div>
                 <div className="text-sm text-[#929ea6] tracking-wider uppercase">Divisions</div>
               </div>
               <div className="text-center">
-                <div className="text-4xl md:text-5xl font-light text-[#6194b0] mb-2">50+</div>
+                <div className="text-4xl md:text-5xl font-light text-[#82b3c9] mb-2">50+</div>
                 <div className="text-sm text-[#929ea6] tracking-wider uppercase">Countries</div>
               </div>
               <div className="text-center">
-                <div className="text-4xl md:text-5xl font-light text-[#6194b0] mb-2">24/7</div>
+                <div className="text-4xl md:text-5xl font-light text-[#82b3c9] mb-2">24/7</div>
                 <div className="text-sm text-[#929ea6] tracking-wider uppercase">Operations</div>
               </div>
             </div>

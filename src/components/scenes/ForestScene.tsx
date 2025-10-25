@@ -250,19 +250,19 @@ export default function ForestScene({ progress, opacity, isVisible }: ForestScen
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-12">
                 <div className="text-center">
-                  <div className="text-4xl text-[#6194b0] mb-2">🌞</div>
+                  <div className="text-4xl text-[#82b3c9] mb-2">🌞</div>
                   <div className="text-sm text-[#929ea6] tracking-wide">Solar Energy</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-4xl text-[#6194b0] mb-2">💨</div>
+                  <div className="text-4xl text-[#82b3c9] mb-2">💨</div>
                   <div className="text-sm text-[#929ea6] tracking-wide">Wind Power</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-4xl text-[#6194b0] mb-2">⚡</div>
+                  <div className="text-4xl text-[#82b3c9] mb-2">⚡</div>
                   <div className="text-sm text-[#929ea6] tracking-wide">Clean Tech</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-4xl text-[#6194b0] mb-2">🔋</div>
+                  <div className="text-4xl text-[#82b3c9] mb-2">🔋</div>
                   <div className="text-sm text-[#929ea6] tracking-wide">Energy Storage</div>
                 </div>
               </div>
@@ -281,7 +281,7 @@ export default function ForestScene({ progress, opacity, isVisible }: ForestScen
                   onClick={() => setActiveTab(category)}
                   className={`text-sm md:text-base tracking-widest uppercase font-medium transition-all duration-300 pb-2 ${
                     activeTab === category
-                      ? 'text-[#6194b0] border-b-2 border-[#6194b0]'
+                      ? 'text-[#82b3c9] border-b-2 border-[#82b3c9]'
                       : 'text-[#929ea6] hover:text-[#374851]'
                   }`}
                 >
@@ -301,7 +301,7 @@ export default function ForestScene({ progress, opacity, isVisible }: ForestScen
                   }}
                 >
                   {/* Circular Icon */}
-                  <div className="w-20 h-20 rounded-full bg-white border-2 border-[#6194b0]/30 flex items-center justify-center text-4xl shadow-lg backdrop-blur-sm">
+                  <div className="w-20 h-20 rounded-full bg-white border-2 border-[#82b3c9]/30 flex items-center justify-center text-4xl shadow-lg backdrop-blur-sm">
                     {item.icon}
                   </div>
 
@@ -332,15 +332,15 @@ export default function ForestScene({ progress, opacity, isVisible }: ForestScen
               {/* Equality Metrics */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12 bg-white/60 backdrop-blur-sm p-8 rounded-lg">
                 <div className="text-center md:text-left">
-                  <div className="text-3xl font-light text-[#6194b0] mb-1">40%</div>
+                  <div className="text-3xl font-light text-[#82b3c9] mb-1">40%</div>
                   <div className="text-sm text-[#929ea6] tracking-wide">Women in Leadership</div>
                 </div>
                 <div className="text-center md:text-left">
-                  <div className="text-3xl font-light text-[#6194b0] mb-1">25+</div>
+                  <div className="text-3xl font-light text-[#82b3c9] mb-1">25+</div>
                   <div className="text-sm text-[#929ea6] tracking-wide">Nationalities</div>
                 </div>
                 <div className="text-center md:text-left">
-                  <div className="text-3xl font-light text-[#6194b0] mb-1">100%</div>
+                  <div className="text-3xl font-light text-[#82b3c9] mb-1">100%</div>
                   <div className="text-sm text-[#929ea6] tracking-wide">Equal Pay Commitment</div>
                 </div>
               </div>

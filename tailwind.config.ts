@@ -10,6 +10,8 @@ export default {
   theme: {
     extend: {
       colors: {
+        'montfort-blue-light': '#A8C5DA',
+        'montfort-blue-dark': '#79A8C1',
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         card: {

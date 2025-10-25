@@ -57,7 +57,7 @@ export default function Header() {
                     {item.label}
                   </span>
                   {isActive && (
-                    <span className={`absolute -bottom-2 left-0 right-0 h-[2px] ${isScrolled ? 'bg-[#6194b0]' : 'bg-white'}`} />
+                    <span className={`absolute -bottom-2 left-0 right-0 h-[2px] ${isScrolled ? 'bg-montfort-blue' : 'bg-white'}`} />
                   )}
                 </Link>
               );
@@ -66,7 +66,7 @@ export default function Header() {
 
           {/* Mobile Logo */}
           <Link href="/" className="lg:hidden">
-            <span className="text-xs tracking-widest text-[#374851]">MONTFORT</span>
+            <span className="text-xs tracking-widest text-montfort-blue-dark">MONTFORT</span>
           </Link>
 
           {/* Right Side - News & Menu */}
@@ -75,12 +75,12 @@ export default function Header() {
               href="/news"
               className={`flex items-center gap-2 text-xs tracking-widest transition-colors ${
                 isScrolled
-                  ? 'text-[#929ea6] hover:text-[#374851]'
+                  ? 'text-montfort-gray hover:text-montfort-blue-dark'
                   : 'text-white/70 hover:text-white'
               }`}
             >
               <span>NEWS</span>
-              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-[#6194b0] text-white text-[10px]">
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-montfort-blue text-white text-[10px]">
                 15
               </span>
             </Link>
@@ -89,16 +89,16 @@ export default function Header() {
               onClick={() => setMobileOpen((open) => !open)}
               className={`flex items-center gap-2 text-xs tracking-widest transition-colors ${
                 isScrolled
-                  ? 'text-[#929ea6] hover:text-[#374851]'
+                  ? 'text-montfort-gray hover:text-montfort-blue-dark'
                   : 'text-white/70 hover:text-white'
               }`}
               aria-label="Toggle menu"
             >
               <span className="hidden md:inline">MENU</span>
               <div className="flex flex-col gap-[3px]">
-                <span className={`w-4 h-[1.5px] ${isScrolled ? 'bg-[#929ea6]' : 'bg-white'}`} />
-                <span className={`w-4 h-[1.5px] ${isScrolled ? 'bg-[#929ea6]' : 'bg-white'}`} />
-                <span className={`w-4 h-[1.5px] ${isScrolled ? 'bg-[#929ea6]' : 'bg-white'}`} />
+                <span className={`w-4 h-[1.5px] ${isScrolled ? 'bg-montfort-gray' : 'bg-white'}`} />
+                <span className={`w-4 h-[1.5px] ${isScrolled ? 'bg-montfort-gray' : 'bg-white'}`} />
+                <span className={`w-4 h-[1.5px] ${isScrolled ? 'bg-montfort-gray' : 'bg-white'}`} />
               </div>
             </button>
           </div>
@@ -110,7 +110,7 @@ export default function Header() {
             mobileOpen ? 'max-h-96 mt-6' : 'max-h-0'
           }`}
         >
-          <div className="flex flex-col space-y-4 pb-4">
+          <nav className="flex flex-col space-y-4 pb-4" aria-label="Mobile">
             {navigationItems.map((item) => {
               const isActive =
                 item.href === '/'
@@ -124,15 +124,15 @@ export default function Header() {
                   onClick={() => setMobileOpen(false)}
                   className={`text-xs tracking-widest transition-colors ${
                     isActive
-                      ? 'text-[#374851] font-bold'
-                      : 'text-[#929ea6] hover:text-[#374851]'
+                      ? 'text-montfort-blue-dark font-bold'
+                      : 'text-montfort-gray hover:text-montfort-blue-dark'
                   }`}
                 >
                   {item.label}
                 </Link>
               );
             })}
-          </div>
+          </nav>
         </div>
       </nav>
 

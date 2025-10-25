@@ -40,6 +40,10 @@ interface WebGLMountainSceneProps {
   progress?: number; // Global progress from MasterScrollContainer (0-1)
   opacity?: number; // Scene opacity for crossfading (0-1)
   isVisible?: boolean; // Whether scene is currently visible
+  soundEnabled?: boolean;
+  onSoundToggle?: () => void;
+  soundNotice?: string | null;
+  soundLocked?: boolean;
 }
 
 // Time of day presets
@@ -59,72 +63,79 @@ interface TimePreset {
 const TIME_PRESETS: Record<TimeOfDay, TimePreset> = {
   dawn: {
     name: 'dawn',
-    skyColor: new THREE.Color(0x4a5f7a), // Deep blue-grey
-    fogColor: new THREE.Color(0x6a7b8f),
-    fogDensity: 0.018,
-    ambientLight: { color: new THREE.Color(0xc9a86a), intensity: 0.4 },
+    skyColor: new THREE.Color('#1f2d3e'),
+    fogColor: new THREE.Color('#3a4c63'),
+    fogDensity: 0.016,
+    ambientLight: { color: new THREE.Color('#f2caa5'), intensity: 0.42 },
     directionalLight: {
-      color: new THREE.Color(0xffa07a),
-      intensity: 0.3,
-      position: new THREE.Vector3(-10, 5, 10),
+      color: new THREE.Color('#f7b98d'),
+      intensity: 0.35,
+      position: new THREE.Vector3(-14, 7, 12),
     },
     mountainTints: [
-      new THREE.Color(0.5, 0.55, 0.65), // Far - cool blue
-      new THREE.Color(0.7, 0.72, 0.8), // Mid - warming up
-      new THREE.Color(0.9, 0.88, 0.85), // Near - warm dawn light
+      new THREE.Color('#4f5e73'),
+      new THREE.Color('#6a778b'),
+      new THREE.Color('#a3b0c2'),
     ],
   },
   day: {
     name: 'day',
-    skyColor: new THREE.Color(0x1a2841), // Current default
-    fogColor: new THREE.Color(0x1a2841),
-    fogDensity: 0.015,
-    ambientLight: { color: new THREE.Color(0xb8c8d8), intensity: 0.7 },
+    skyColor: new THREE.Color('#0c1b2d'),
+    fogColor: new THREE.Color('#1c2c3d'),
+    fogDensity: 0.01,
+    ambientLight: { color: new THREE.Color('#d7e2f1'), intensity: 0.55 },
     directionalLight: {
-      color: new THREE.Color(0xc8d8e8),
-      intensity: 0.5,
-      position: new THREE.Vector3(10, 10, 10),
+      color: new THREE.Color('#eff7ff'),
+      intensity: 0.65,
+      position: new THREE.Vector3(16, 20, 14),
     },
     mountainTints: [
-      new THREE.Color(0.7, 0.75, 0.85), // Far
-      new THREE.Color(0.85, 0.88, 0.95), // Mid
-      new THREE.Color(1.0, 1.0, 1.0), // Near
+      new THREE.Color('#5c6f86'),
+      new THREE.Color('#7c8ea5'),
+      new THREE.Color('#cfd9e6'),
     ],
   },
   dusk: {
     name: 'dusk',
-    skyColor: new THREE.Color(0x2d1b3d), // Purple-blue
-    fogColor: new THREE.Color(0x4a2b5a),
-    fogDensity: 0.02,
-    ambientLight: { color: new THREE.Color(0xd8a86a), intensity: 0.35 },
+    skyColor: new THREE.Color('#1b1d35'),
+    fogColor: new THREE.Color('#2f2b46'),
+    fogDensity: 0.018,
+    ambientLight: { color: new THREE.Color('#f0b4a1'), intensity: 0.32 },
     directionalLight: {
-      color: new THREE.Color(0xff6b4a),
-      intensity: 0.4,
-      position: new THREE.Vector3(10, 3, -10),
+      color: new THREE.Color('#ff8c6a'),
+      intensity: 0.42,
+      position: new THREE.Vector3(9, 4, -9),
     },
     mountainTints: [
-      new THREE.Color(0.4, 0.35, 0.5), // Far - deep purple
-      new THREE.Color(0.65, 0.5, 0.6), // Mid - purple-pink
-      new THREE.Color(0.9, 0.7, 0.6), // Near - warm sunset glow
+      new THREE.Color('#423a5c'),
+      new THREE.Color('#695076'),
+      new THREE.Color('#a77d75'),
     ],
   },
   night: {
     name: 'night',
-    skyColor: new THREE.Color(0x0a0e1a), // Very dark blue
-    fogColor: new THREE.Color(0x1a1e2a),
-    fogDensity: 0.025,
-    ambientLight: { color: new THREE.Color(0x4a5a7a), intensity: 0.2 },
+    skyColor: new THREE.Color('#070d1a'),
+    fogColor: new THREE.Color('#111a2a'),
+    fogDensity: 0.024,
+    ambientLight: { color: new THREE.Color('#3f4e63'), intensity: 0.18 },
     directionalLight: {
-      color: new THREE.Color(0x8a9aaa), // Moonlight
-      intensity: 0.15,
-      position: new THREE.Vector3(-5, 15, -5),
+      color: new THREE.Color('#92a4c4'),
+      intensity: 0.18,
+      position: new THREE.Vector3(-8, 12, -6),
     },
     mountainTints: [
-      new THREE.Color(0.2, 0.25, 0.35), // Far - dark blue
-      new THREE.Color(0.35, 0.4, 0.5), // Mid - slightly lighter
-      new THREE.Color(0.5, 0.55, 0.65), // Near - silhouette
+      new THREE.Color('#1a2234'),
+      new THREE.Color('#2b3547'),
+      new THREE.Color('#3d475a'),
     ],
   },
+};
+
+const TIME_OF_DAY_LABELS: Record<TimeOfDay, string> = {
+  dawn: 'DAWN',
+  day: 'DAY',
+  dusk: 'DUSK',
+  night: 'NIGHT',
 };
 
 // Cloud particle interface
@@ -499,7 +510,11 @@ export default function WebGLMountainScene({
   children,
   progress = 0,
   opacity = 1,
-  isVisible = true
+  isVisible = true,
+  soundEnabled = false,
+  onSoundToggle,
+  soundNotice = null,
+  soundLocked = false,
 }: WebGLMountainSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -531,6 +546,17 @@ export default function WebGLMountainScene({
   const { menuOpen, setMenuOpen } = useMenu();
   const tourTimelineRef = useRef<gsap.core.Timeline | null>(null);
   const zoomScrollTriggerRef = useRef<ScrollTrigger | null>(null);
+  const currentTimeRef = useRef<TimeOfDay>('day');
+  const snowEnabledRef = useRef(false);
+  const handleMountainClickRef = useRef<(peakIndex: number) => void>(() => {});
+
+  useEffect(() => {
+    currentTimeRef.current = currentTime;
+  }, [currentTime]);
+
+  useEffect(() => {
+    snowEnabledRef.current = snowEnabled;
+  }, [snowEnabled]);
 
   // Function to smoothly transition to a new time of day
   const transitionToTime = (newTime: TimeOfDay) => {
@@ -715,6 +741,8 @@ export default function WebGLMountainScene({
     }
   };
 
+  handleMountainClickRef.current = handleMountainClick;
+
   // Function to toggle snow particles
   const toggleSnow = () => {
     if (!sceneRef.current) return;
@@ -730,6 +758,7 @@ export default function WebGLMountainScene({
       });
       snowParticlesRef.current = [];
       setSnowEnabled(false);
+      snowEnabledRef.current = false;
     } else {
       // Create snow particles
       const snowCount = 300;
@@ -764,6 +793,7 @@ export default function WebGLMountainScene({
         });
       }
       setSnowEnabled(true);
+      snowEnabledRef.current = true;
     }
   };
 
@@ -815,7 +845,7 @@ export default function WebGLMountainScene({
     rendererRef.current = renderer;
 
     // Enhanced lighting with color temperature (using day preset initially)
-    const defaultPreset = TIME_PRESETS[currentTime];
+    const defaultPreset = TIME_PRESETS[currentTimeRef.current];
     const ambientLight = new THREE.AmbientLight(
       defaultPreset.ambientLight.color,
       defaultPreset.ambientLight.intensity
@@ -1099,7 +1129,7 @@ export default function WebGLMountainScene({
         if (intersects.length > 0) {
           const mountainIndex = mountainMeshesRef.current.indexOf(intersects[0].object as THREE.Mesh);
           if (mountainIndex !== -1) {
-            handleMountainClick(mountainIndex);
+            handleMountainClickRef.current(mountainIndex);
           }
         }
       }
@@ -1185,7 +1215,7 @@ export default function WebGLMountainScene({
         });
 
         // Animate snow particles (falling with sway)
-        if (snowEnabled) {
+        if (snowEnabledRef.current) {
           snowParticlesRef.current.forEach((particle) => {
             // Apply velocity (falling + drift)
             particle.mesh.position.add(particle.velocity);
@@ -1518,18 +1548,78 @@ export default function WebGLMountainScene({
           style={{ zIndex: 0 }}
         />
 
-        {/* Scene Controls Button */}
+        {/* Experience Control Dock */}
         <div
-          className="absolute top-8 right-8 pointer-events-auto"
-          style={{ zIndex: 30 }}
+          className="absolute top-6 right-6 sm:top-8 sm:right-8 pointer-events-auto flex flex-col items-end gap-3"
+          style={{ zIndex: 40 }}
         >
-          <button
-            onClick={() => setMenuOpen(true)}
-            className="px-6 py-3 rounded-md text-xs uppercase tracking-wider font-medium transition-all duration-300 bg-white/10 text-white/70 hover:bg-white/20 hover:text-white backdrop-blur-sm border border-white/10 flex items-center gap-2"
-          >
-            <span>⚙️</span>
-            <span>Scene Controls</span>
-          </button>
+          {soundNotice && (
+            <div className="max-w-[260px] rounded-xl border border-white/12 bg-[#0b1728]/85 px-4 py-2 text-[11px] leading-relaxed text-white/75 shadow-[0_20px_45px_rgba(3,9,18,0.55)] backdrop-blur-xl">
+              {soundNotice}
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 rounded-full border border-white/12 bg-[#0b1728]/80 px-2 py-2 shadow-[0_22px_48px_rgba(3,9,18,0.6)] backdrop-blur-2xl">
+            <button
+              onClick={soundLocked ? undefined : () => onSoundToggle?.()}
+              disabled={soundLocked}
+              className={`flex items-center gap-2 rounded-full px-3 py-[10px] text-[10px] uppercase tracking-[0.32em] transition-all duration-300 ${
+                soundEnabled
+                  ? 'bg-white text-[#0f1a2e] shadow-[0_12px_26px_rgba(255,255,255,0.35)]'
+                  : 'text-white/75 hover:text-white'
+              } ${soundLocked ? 'opacity-40 cursor-not-allowed' : ''}`}
+            >
+              <span>Sound</span>
+              <span className="text-[10px] tracking-[0.32em]">
+                {soundEnabled ? 'ON' : 'OFF'}
+              </span>
+            </button>
+
+            <span className="hidden sm:block h-8 w-px bg-white/15" />
+
+            <button
+              onClick={toggleSnow}
+              className={`flex items-center gap-2 rounded-full px-3 py-[10px] text-[10px] uppercase tracking-[0.32em] transition-all duration-300 ${
+                snowEnabled
+                  ? 'bg-white/15 text-white shadow-[0_12px_26px_rgba(13,33,55,0.6)]'
+                  : 'text-white/75 hover:text-white'
+              }`}
+            >
+              <span>Snow</span>
+              <span className="text-[10px] tracking-[0.32em]">
+                {snowEnabled ? 'ON' : 'OFF'}
+              </span>
+            </button>
+
+            <span className="hidden sm:block h-8 w-px bg-white/15" />
+
+            <button
+              onClick={() => setMenuOpen(true)}
+              className="flex items-center gap-2 rounded-full px-3 py-[10px] text-[10px] uppercase tracking-[0.32em] text-white/80 transition-all duration-300 hover:text-white hover:bg-white/12"
+            >
+              <span>Menu</span>
+              <span className="hidden sm:inline text-white/50">OPEN</span>
+            </button>
+          </div>
+
+          <div className="hidden md:flex items-center gap-2 rounded-full border border-white/12 bg-[#0b1728]/75 px-2 py-2 shadow-[0_18px_38px_rgba(3,9,18,0.55)] backdrop-blur-2xl">
+            {(Object.keys(TIME_OF_DAY_LABELS) as TimeOfDay[]).map((value) => {
+              const isActive = currentTime === value;
+              return (
+                <button
+                  key={value}
+                  onClick={() => transitionToTime(value)}
+                  className={`rounded-full px-3 py-[10px] text-[10px] uppercase tracking-[0.32em] transition-all duration-300 ${
+                    isActive
+                      ? 'bg-white text-[#0f1a2e] shadow-[0_12px_24px_rgba(255,255,255,0.35)]'
+                      : 'text-white/65 hover:text-white'
+                  }`}
+                >
+                  {TIME_OF_DAY_LABELS[value]}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Menu Panel */}
@@ -1545,6 +1635,10 @@ export default function WebGLMountainScene({
               startCinematicTour();
             }
           }}
+          soundEnabled={soundEnabled}
+          onSoundToggle={onSoundToggle ?? (() => {})}
+          soundNotice={soundNotice}
+          soundLocked={soundLocked}
         />
 
         {/* Mountain Peak Tooltip */}
